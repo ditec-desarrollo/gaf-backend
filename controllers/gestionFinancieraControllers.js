@@ -2782,6 +2782,31 @@ const eliminarEncuadreLegal = async (req, res) => {
   }
 };
 
+const obtenerDatosItem = async (req,res) =>{
+  let connection;
+  const itemId = req.query.itemId;
+  console.log(itemId);
+  
+  try {
+    connection = await conectar_BD_GAF_MySql(); // Conexión a la base de datos
+
+    const sql = `SELECT * FROM item AS it JOIN anexo AS a ON it.anexo_id = a.anexo_id JOIN finalidad AS f ON it.finalidad_id = f.finalidad_id JOIN funcion AS fun ON it.funcion_id = fun.funcion_id WHERE item_id = ?`;
+    const [info] = await connection.execute(sql,[itemId]);
+
+    if (info.length > 0) {
+      res.status(200).json({ info });
+    } else {
+      res.status(204).json({ message: "No hay datos disponibles" });
+    }
+  } catch (error) {
+    console.error('Error al obtener los datos:', error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
 
 module.exports = {
   listarAnexos,
@@ -2848,7 +2873,7 @@ module.exports = {
   buscarExpedienteParaModificarPorTransferenciaEntrePartidas,
   obtenerNomencladores,
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
- obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras
+ obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem
 };
 
 
