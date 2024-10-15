@@ -72,6 +72,8 @@ const {
   editarPatrimonioImagenes,
   renombrarPatrimonio,
   obtenerImagenesPatri,
+  crearBannerImagenes,
+  obtenerImagenesBanner,
 } = require("../controllers/adminControllers");
 
 // Configurar multer para manejar la carga de archivos (deberías incluir estas configuraciones también)
@@ -345,17 +347,11 @@ router.get("/listarUbicaciones", listarUbicacionPatrimonioBack);
 router.get("/obtenerImagenesPatri", obtenerImagenesPatri);
 router.get("/obtenerImagenCard", obtenerImagenCard);
 router.post("/agregarPatrimonio", agregarPatrimonio);
-router.post(
-  "/crearPatrimonioImagenes",
-  parseMultipartFormData,
-  crearPatrimonioImagenes
-);
+router.post("/crearBannerImagenes", crearBannerImagenes);
+router.post("/obtenerImagenesBanner", obtenerImagenesBanner);
+router.post("/crearPatrimonioImagenes", parseMultipartFormData, crearPatrimonioImagenes);
 router.post("/editarPatrimonio", editarPatrimonio);
-router.post(
-  "/editarPatrimonioImagenes",
-  parseMultipartFormData,
-  editarPatrimonioImagenes
-);
+router.post("/editarPatrimonioImagenes", parseMultipartFormData, editarPatrimonioImagenes);
 router.post("/renombrarPatrimonio", renombrarPatrimonio);
 router.post("/editarCategoriaPatrimonio", editarCategoriaPatrimonio);
 router.post("/editarTipologiaPatrimonio", editarTipologiaPatrimonio);

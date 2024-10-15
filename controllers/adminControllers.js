@@ -2053,6 +2053,93 @@ const editarUbicacionPatrimonio = async (req, res) => {
   }
 };
 
+const crearBannerImagenes = async (req, res) => {
+  let sftp;
+
+  try {
+    const { nombre_banner } = req.body; // Cambiado a nombre del banner
+    const newImage = req.files; // Asumiendo que estás utilizando un middleware que llena req.files
+
+    // Verifica que se haya subido al menos un archivo
+    if (!newImage || Object.keys(newImage).length === 0) {
+      return res.status(400).json({ message: "No se ha subido ninguna imagen." });
+    }
+
+    sftp = await conectarSFTPCondor();
+    
+    // Procesa imágenes de banner
+    for (const key in newImage) {
+      let archivo = newImage[key];
+
+      // Procesa imágenes de banner con diferentes sufijos
+      if (key.includes("imagen_banner")) {
+        await procesarImagen(archivo, "_banner", sftp, nombre_banner);
+      }
+      if (key.includes("imagen_banner1")) {
+        await procesarImagen(archivo, "_banner1", sftp, nombre_banner);
+      }
+      if (key.includes("imagen_banner2")) {
+        await procesarImagen(archivo, "_banner2", sftp, nombre_banner);
+      }
+      if (key.includes("imagen_banner3")) {
+        await procesarImagen(archivo, "_banner3", sftp, nombre_banner);
+      }
+    }
+
+    res.status(200).json({ message: "Imagen de banner actualizada correctamente." });
+  } catch (error) {
+    console.error("Error en crearBannerImagenes:", error); // Log para depuración
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    if (sftp) sftp.end();
+  }
+};
+
+const obtenerImagenesBanner = async (req, res) => {
+  let sftp;
+  const nombreArchivo = req.query.nombreArchivo;
+  console.log(nombreArchivo, "Nombre archivo recibido ImagenesBanner");
+
+  const archivosBuscados = [
+    `${nombreArchivo}_banner`,
+    `${nombreArchivo}_banner1`,
+    `${nombreArchivo}_banner2`,
+    `${nombreArchivo}_banner3`,
+  ];
+
+  try {
+    sftp = await conectarSFTPCondor();
+    const remotePath = `/var/www/vhosts/cidituc.smt.gob.ar/Fotos-Banner/${nombreArchivo}/`;
+
+    const archivosRemotos = await sftp.list(remotePath);
+
+    const imagenesEncontradas = {};
+
+    for (const archivoRemoto of archivosRemotos) {
+      const nombreSinExtension = archivoRemoto.name.split(".")[0];
+
+      if (archivosBuscados.includes(nombreSinExtension)) {
+        const remoteFilePath = `${remotePath}${archivoRemoto.name}`;
+        const buffer = await sftp.get(remoteFilePath);
+
+        const base64Image = buffer.toString("base64");
+
+        imagenesEncontradas[nombreSinExtension] = {
+          nombre: archivoRemoto.name,
+          imagen: base64Image,
+        };
+      }
+    }
+
+    res.status(200).json(imagenesEncontradas);
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Error al obtener las imágenes." });
+  } finally {
+    if (sftp) sftp.end();
+  }
+};
+
+
 // -------------------PATRIMOINIO MUNICIPAL--------------
 
 module.exports = {
@@ -2117,4 +2204,7 @@ module.exports = {
   editarEstadoPatrimonio,
   editarAutorPartimonio,
   editarUbicacionPatrimonio,
+  crearBannerImagenes,
+  obtenerImagenesBanner,
+
 };
