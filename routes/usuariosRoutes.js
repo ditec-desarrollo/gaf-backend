@@ -20,7 +20,8 @@ const {
   editarClave,
   restablecerClave,
   desactivarUsuario,
-  enviarEmailMulta
+  enviarEmailMulta,
+  enviarEmailLibreDeuda
 } = require("../controllers/usuariosControllers");
 
 const verifyRole = require("../middlewares/verifyRole");
@@ -65,6 +66,8 @@ router.put("/restablecerClave", restablecerClave);
 router.post("/registro", agregarUsuarioMYSQL);
 router.put("/email", enviarEmailValidacion);
 router.patch("/desactivar", desactivarUsuario);
-router.post("/consultaMulta", enviarEmailMulta);
+router.post("/consultaMulta",auth, enviarEmailMulta);
+
+router.post("/obtenerLibreDeuda",auth, enviarEmailLibreDeuda);
 
 module.exports = router;
