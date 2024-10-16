@@ -1455,6 +1455,7 @@ const crearPatrimonioImagenes = async (req, res) => {
     if (sftp) sftp.end();
   }
 };
+
 const obtenerImagenesPatri = async (req, res) => {
   let sftp;
   const nombreArchivo = req.query.nombreArchivo;
@@ -2057,44 +2058,35 @@ const crearBannerImagenes = async (req, res) => {
   let sftp;
 
   try {
-    const { nombre_banner } = req.body; // Cambiado a nombre del banner
-    const newImage = req.files; // Asumiendo que estás utilizando un middleware que llena req.files
+    console.log("Cuerpo de la solicitud:", req.body); // Verifica el contenido de la solicitud
+    console.log("Archivos recibidos:", req.file); // Verifica el archivo recibido
 
-    // Verifica que se haya subido al menos un archivo
-    if (!newImage || Object.keys(newImage).length === 0) {
+    const newImage = req.file;
+
+    if (!newImage) {
       return res.status(400).json({ message: "No se ha subido ninguna imagen." });
     }
 
     sftp = await conectarSFTPCondor();
-    
-    // Procesa imágenes de banner
-    for (const key in newImage) {
-      let archivo = newImage[key];
 
-      // Procesa imágenes de banner con diferentes sufijos
-      if (key.includes("imagen_banner")) {
-        await procesarImagen(archivo, "_banner", sftp, nombre_banner);
-      }
-      if (key.includes("imagen_banner1")) {
-        await procesarImagen(archivo, "_banner1", sftp, nombre_banner);
-      }
-      if (key.includes("imagen_banner2")) {
-        await procesarImagen(archivo, "_banner2", sftp, nombre_banner);
-      }
-      if (key.includes("imagen_banner3")) {
-        await procesarImagen(archivo, "_banner3", sftp, nombre_banner);
-      }
-    }
+    const suffix = Date.now();
+    await subirImagenBanner(newImage, suffix, sftp);
 
     res.status(200).json({ message: "Imagen de banner actualizada correctamente." });
   } catch (error) {
-    console.error("Error en crearBannerImagenes:", error); // Log para depuración
+    console.error("Error en crearBannerImagenes:", error);
     res.status(500).json({ message: error.message || "Algo salió mal :(" });
   } finally {
     if (sftp) sftp.end();
   }
 };
 
+const subirImagenBanner = async (newImage, suffix, sftp) => {
+  const remotePath = `/var/www/vhosts/cidituc.smt.gob.ar/Fotos-Patrimonio/${newImage.filename}`;
+  await sftp.put(newImage.path, remotePath); 
+  console.log(remotePath, "xd");
+  };
+  
 const obtenerImagenesBanner = async (req, res) => {
   let sftp;
   const nombreArchivo = req.query.nombreArchivo;

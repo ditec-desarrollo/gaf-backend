@@ -347,7 +347,7 @@ router.get("/listarUbicaciones", listarUbicacionPatrimonioBack);
 router.get("/obtenerImagenesPatri", obtenerImagenesPatri);
 router.get("/obtenerImagenCard", obtenerImagenCard);
 router.post("/agregarPatrimonio", agregarPatrimonio);
-router.post("/crearBannerImagenes", crearBannerImagenes);
+router.post('/crearBannerImagenes', upload.single('imagen_banner'), crearBannerImagenes);
 router.post("/obtenerImagenesBanner", obtenerImagenesBanner);
 router.post("/crearPatrimonioImagenes", parseMultipartFormData, crearPatrimonioImagenes);
 router.post("/editarPatrimonio", editarPatrimonio);
