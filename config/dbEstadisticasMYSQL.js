@@ -113,6 +113,21 @@ const conectar_BD_GED_MySql = async () => {
     }
 }
 
+const conectar_smt_Patrimonio_MySql = async () => {
+    try {
+        const connection = await mysql.createConnection({
+            host: '172.16.8.214',
+            user: 'usuario_desarrollo',
+            port: '3306',
+            password: 'dev2024',
+            database: 'smt_patrimonio',
+        });
+        return connection
+    } catch (error) {
+        console.log(error.message);
+    }
+}
+
 const conectar_BD_Gestion_MySql = async () => {
     try {
         const connection = await mysql.createConnection({
@@ -128,4 +143,4 @@ const conectar_BD_Gestion_MySql = async () => {
     }
 }
 
-module.exports = { conectarBDEstadisticasMySql, conectar_BD_GAF_MySql, conectar_BD_EDUCACION_MySql, conectarSMTContratacion, conectarSMTPatrimonio,conectar_BD_GED_MySql, conectar_BD_Gestion_MySql} 
+module.exports = { conectarBDEstadisticasMySql, conectar_BD_GAF_MySql, conectar_BD_EDUCACION_MySql, conectarSMTContratacion, conectarSMTPatrimonio,conectar_BD_GED_MySql, conectar_BD_Gestion_MySql, conectar_smt_Patrimonio_MySql} 

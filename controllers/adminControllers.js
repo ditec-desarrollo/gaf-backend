@@ -2054,12 +2054,17 @@ const editarUbicacionPatrimonio = async (req, res) => {
   }
 };
 
+const { conectar_smt_Patrimonio_MySql } = require('../config/dbEstadisticasMYSQL');
+const { conectarFTPCiudadano: conectarFTPCiudadanoFunc } = require('../config/winscpCondor');
+
+// Usa conectarFTPCiudadanoFunc en lugar de conectarFTPCiudadano
 const crearBannerImagenes = async (req, res) => {
   let sftp;
+  let connection;
 
   try {
-    console.log("Cuerpo de la solicitud:", req.body); // Verifica el contenido de la solicitud
-    console.log("Archivos recibidos:", req.file); // Verifica el archivo recibido
+    console.log("Cuerpo de la solicitud:", req.body);
+    console.log("Archivos recibidos:", req.file);
 
     const newImage = req.file;
 
@@ -2067,24 +2072,52 @@ const crearBannerImagenes = async (req, res) => {
       return res.status(400).json({ message: "No se ha subido ninguna imagen." });
     }
 
-    sftp = await conectarSFTPCondor();
+    try {
+      sftp = await conectarSFTPCiudadanoFunc(); // Cambié aquí
+      if (!sftp || typeof sftp.put !== 'function') {
+        throw new Error("Conexión SFTP inválida o función 'put' no disponible.");
+      }
+      console.log("Conectado al servidor SFTP correctamente.");
+    } catch (sftpError) {
+      console.error("Error al conectar al SFTP:", sftpError);
+      return res.status(500).json({ message: "Error al conectar al servidor SFTP." });
+    }
 
-    const suffix = Date.now();
-    await subirImagenBanner(newImage, suffix, sftp);
+    const extension = newImage.originalname.split('.').pop();
+    const baseName = newImage.originalname.replace(`.${extension}`, '');
+    const newFileName = `${baseName}_banner.${extension}`;
+    const remotePath = `/var/www/vhosts/cidituc.smt.gob.ar/Fotos-Patrimonio/Banner/${newFileName}`;
 
-    res.status(200).json({ message: "Imagen de banner actualizada correctamente." });
+    await sftp.put(newImage.path, remotePath);
+
+    try {
+      // Conexión a la base de datos
+      connection = await conectar_smt_Patrimonio_MySql();
+
+      const sql = "INSERT INTO banner (nombre_banner, habilita) VALUES (?, ?)";
+      const values = [newFileName, 1];  // Habilita por defecto como 1 (habilitado)
+
+      await connection.execute(sql, values);
+
+      res.status(200).json({ message: "Imagen de banner actualizada y guardada correctamente." });
+    } catch (dbError) {
+      console.error("Error al insertar en la base de datos:", dbError);
+      res.status(500).json({ message: "Error al insertar en la base de datos." });
+    }
   } catch (error) {
     console.error("Error en crearBannerImagenes:", error);
     res.status(500).json({ message: error.message || "Algo salió mal :(" });
   } finally {
-    if (sftp) sftp.end();
+    if (sftp && typeof sftp.end === 'function') sftp.end();
+    if (connection && typeof connection.end === 'function') connection.end();
   }
 };
 
+
+
 const subirImagenBanner = async (newImage, suffix, sftp) => {
-  const remotePath = `/var/www/vhosts/cidituc.smt.gob.ar/Fotos-Patrimonio/${newImage.filename}`;
-  await sftp.put(newImage.path, remotePath); 
-  console.log(remotePath, "xd");
+  const remotePath = `/var/www/vhosts/cidituc.smt.gob.ar/Fotos-Patrimonio/Banner/${newImage.filename}`;
+  await sftp.put(newImage.path, remotePath);
   };
   
 const obtenerImagenesBanner = async (req, res) => {
