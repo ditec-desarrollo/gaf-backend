@@ -2055,9 +2055,7 @@ const editarUbicacionPatrimonio = async (req, res) => {
 };
 
 const { conectar_smt_Patrimonio_MySql } = require('../config/dbEstadisticasMYSQL');
-const { conectarFTPCiudadano: conectarFTPCiudadanoFunc } = require('../config/winscpCondor');
 
-// Usa conectarFTPCiudadanoFunc en lugar de conectarFTPCiudadano
 const crearBannerImagenes = async (req, res) => {
   let sftp;
   let connection;
@@ -2073,7 +2071,7 @@ const crearBannerImagenes = async (req, res) => {
     }
 
     try {
-      sftp = await conectarSFTPCiudadanoFunc(); // Cambié aquí
+      sftp = await conectarSFTPCondor();
       if (!sftp || typeof sftp.put !== 'function') {
         throw new Error("Conexión SFTP inválida o función 'put' no disponible.");
       }
@@ -2113,7 +2111,19 @@ const crearBannerImagenes = async (req, res) => {
   }
 };
 
-
+const obtenerBanners = async (req, res) => {
+  let connection; 
+  try {
+    connection = await conectar_smt_Patrimonio_MySql();
+    const [rows] = await connection.execute("SELECT * FROM banner");
+    res.json(rows);
+  } catch (error) {
+    console.error("Error al obtener los banners:", error);
+    res.status(500).json({ message: "Error al obtener los banners." });
+  } finally {
+    if (connection && typeof connection.end === "function") connection.end();
+  }
+};
 
 const subirImagenBanner = async (newImage, suffix, sftp) => {
   const remotePath = `/var/www/vhosts/cidituc.smt.gob.ar/Fotos-Patrimonio/Banner/${newImage.filename}`;
@@ -2231,5 +2241,6 @@ module.exports = {
   editarUbicacionPatrimonio,
   crearBannerImagenes,
   obtenerImagenesBanner,
+  obtenerBanners,
 
 };
