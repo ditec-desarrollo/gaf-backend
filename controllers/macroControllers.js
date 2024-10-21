@@ -15,6 +15,7 @@ const bcrypt = require("bcryptjs");
 const CustomError = require("../utils/customError");
 const jwt = require("jsonwebtoken");
 const QRCode = require("qrcode");
+const { conectarBaseDeDatosSanidad } = require("../config/dbSQLSanidad");
 
 const obtenerCategorias = async (req, res) => {
   const connection = await conectarMySql();
@@ -22,9 +23,9 @@ const obtenerCategorias = async (req, res) => {
     console.log("Conectado a MySQL");
 
     const [results, fields] = await connection.execute(
-    ` SELECT categoria_reclamo.id_categoria,categoria_reclamo.nombre_categoria FROM categoria_reclamo WHERE categoria_reclamo.habilita = 1 `
+      ` SELECT categoria_reclamo.id_categoria,categoria_reclamo.nombre_categoria FROM categoria_reclamo WHERE categoria_reclamo.habilita = 1 `
     );
-    // console.log(fields); 
+    // console.log(fields);
     // Enviar la respuesta
     res.status(200).json({ results });
 
@@ -43,26 +44,25 @@ const obtenerCategorias = async (req, res) => {
 };
 
 const funcionPrueba = async (req, res) => {
-  
   try {
     const telefono = req.query.telefono;
-    const cuil = req.query.cuil;  
+    const cuil = req.query.cuil;
     const connection = await conectarBDEstadisticasMySql();
- console.log(cuil, "cuil");
-      const [results, fields] = await connection.execute (
-      ` SELECT * FROM persona WHERE documento_persona = ? AND telefono_persona = ?` , [cuil, telefono]  
-      )
-res.status(200).json({results})
-   
+    console.log(cuil, "cuil");
+    const [results, fields] = await connection.execute(
+      ` SELECT * FROM persona WHERE documento_persona = ? AND telefono_persona = ?`,
+      [cuil, telefono]
+    );
+    res.status(200).json({ results });
+
     console.log(results, "results");
     await connection.end();
     console.log("conexión cerrada");
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: "Error de servidor" });
-    
   }
-}
+};
 
 const obtenerTiposDeReclamoPorCategoria = async (req, res) => {
   const connection = await conectarMySql();
@@ -138,7 +138,7 @@ const ingresarReclamo = async (req, res) => {
 
         const [derivacionReclamo, fieldsDerivacionReclamo] =
           await connection.execute(
-            "SELECT derivacion_reclamo.* FROM derivacion_reclamo WHERE derivacion_reclamo.id_treclamo = ? AND derivacion_reclamo.habilita = ?",
+            "SELECT derivacion_reclamo.* FROM derivacion_reclamo WHERE id_treclamo = ? AND derivacion_reclamo.habilita = ?",
             [id_treclamo, 1]
           );
 
@@ -167,55 +167,60 @@ const ingresarReclamo = async (req, res) => {
 
         const reclamoId = nuevoReclamo.id_reclamo;
 
-        await MovimientoReclamo.create(
-          {
-            id_reclamo: reclamoId,
-            id_derivacion: derivacionReclamo[0].id_derivacion,
-            id_oficina: derivacionReclamo[0].id_oficina_deriva,
-            id_estado: 1,
-            id_motivo: 1,
-            detalle_movi: "Inicio del trámite",
-            fecha_ingreso: "0000-00-00 00:00:00",
-            fecha_egreso: "0000-00-00 00:00:00",
-            oficina_graba: 5000,
-          },
-          { transaction }
-        );
-
-        const [oficinaYReparticion, fieldsOficinaYReparticion] =
-          await connection.execute(
-            "SELECT oficina_reparti.nombre_oficina,reparti.nombre_reparti FROM oficina_reparti JOIN reparti ON oficina_reparti.id_reparti = reparti.id_reparti WHERE oficina_reparti.id_oficina = ?",
-            [derivacionReclamo[0].id_oficina_deriva]
+        if (derivacionReclamo != "") {
+          await MovimientoReclamo.create(
+            {
+              id_reclamo: reclamoId,
+              id_derivacion: derivacionReclamo[0].id_derivacion,
+              id_oficina: derivacionReclamo[0].id_oficina_deriva,
+              id_estado: 1,
+              id_motivo: 1,
+              detalle_movi: "Inicio del trámite",
+              fecha_ingreso: "0000-00-00 00:00:00",
+              fecha_egreso: "0000-00-00 00:00:00",
+              oficina_graba: 5000,
+            },
+            { transaction }
           );
 
-        await transaction.commit();
+          const [oficinaYReparticion, fieldsOficinaYReparticion] =
+            await connection.execute(
+              "SELECT oficina_reparti.nombre_oficina,reparti.nombre_reparti FROM oficina_reparti JOIN reparti ON oficina_reparti.id_reparti = reparti.id_reparti WHERE oficina_reparti.id_oficina = ?",
+              [derivacionReclamo[0].id_oficina_deriva]
+            );
 
-        if (req.body.foto?.length > 0) {
-          try {
-            const resUpdateImage = await guardarImagen(req.body, reclamoId);
-            console.log(resUpdateImage);
-          } catch (error) {
-            console.error("Error:", error);
-            res.status(500).json({ error: "Error de servidor imagenes" });
+          await transaction.commit();
+
+          if (req.body.foto?.length > 0) {
+            try {
+              const resUpdateImage = await guardarImagen(req.body, reclamoId);
+              console.log(resUpdateImage);
+            } catch (error) {
+              console.error("Error:", error);
+              res.status(500).json({ error: "Error de servidor imagenes" });
+            }
           }
-        }
 
-        res.status(200).json({
-          message: "Reclamo generado con éxito",
-          Numero_Reclamo: reclamoId,
-          Estado: "Iniciado",
-          Repartición_Derivada: oficinaYReparticion[0].nombre_reparti,
-          Oficina_Receptora: oficinaYReparticion[0].nombre_oficina,
-        });
+          res.status(200).json({
+            message: "Reclamo generado con éxito",
+            Numero_Reclamo: reclamoId,
+            Estado: "Iniciado",
+            Repartición_Derivada: oficinaYReparticion[0].nombre_reparti,
+            Oficina_Receptora: oficinaYReparticion[0].nombre_oficina,
+          });
+        } else
+          res.status(400).json({
+            message: "Este tipo de reclamo no está habilitado.",
+          });
       } else {
         res.status(400).json({
           message:
-            "Las coordenadas proporcionadas están fuera del rango permitido",
+            "Las coordenadas proporcionadas están fuera del rango permitido.",
         });
       }
     } else {
       res.status(400).json({
-        message: "El tipo de reclamo y la categoría no se corresponden",
+        message: "El tipo de reclamo y la categoría no se corresponden.",
       });
     }
 
@@ -761,6 +766,86 @@ const credencial = async (req, res) => {
   }
 };
 
+const obtenerDatosCarnetSanidad = async (req, res) => {
+  const userCuil = req.params.dni;
+
+  const cuilRegex = /^\d{11}$/;
+  if (!cuilRegex.test(userCuil)) {
+    return res.status(400).json({ error: "Ingrese un número de CUIL válido." });
+  }
+
+  const connection = await conectarBaseDeDatosSanidad();
+  try {
+    const dni = userCuil.toString().slice(2, -1);
+
+    const query = `
+      SELECT a.ndocu, a.nombre, a.apellido, 
+             CONVERT(char(10), a.fnac) AS fnac_muestra, 
+             a.calle AS calle,
+             a.ncalle AS nro_calle,
+             a.piso AS piso,
+             a.dpto AS dpto,
+             b.localidadl AS localidad,
+             b.fotorgado AS fotorgado_muestra, 
+             CONVERT(char(10), b.fvencimiento) AS fvencimiento_muestra,
+             b.os AS obraSocial,
+             b.deriva AS deriva,
+             b.dom_fliar AS dom_fliar,
+             b.e_cronicas AS enfermedad_cronica,
+             b.medicamento AS medicamento_recibe,
+             b.notolera AS no_tolera,
+             b.donante AS donante,
+             b.img_foto,
+             CASE
+               WHEN b.estado = 3 THEN 'EN DEPOSITO'
+               WHEN b.fvencimiento IS NOT NULL AND b.fvencimiento < GETDATE() AND b.estado = 1 THEN 'CARNET VENCIDO'
+               WHEN b.fvencimiento IS NOT NULL AND b.fvencimiento > GETDATE() AND b.estado = 1 THEN 'CARNET VIGENTE'
+               WHEN b.estado = 0 THEN 'INCONCLUSO' 
+             END AS situacion
+      FROM solicitante a
+      LEFT JOIN mae_carnet b ON b.ndocu = a.ndocu
+      WHERE a.ndocu = ${dni}
+    `;
+    const result = await connection.query(query);
+
+    if (result.rowsAffected > 0) {
+      const datos = result.recordset[0];
+
+      let ciudadano = {
+        nombre: datos.nombre.trim(),
+        apellido: datos.apellido.trim(),
+        dni: datos.ndocu,
+        cuil: userCuil,
+        nacimiento: datos.fnac_muestra,
+        calle: datos.calle,
+        ncalle: datos.nro_calle,
+        piso: datos.piso,
+        dpto: datos.dpto,
+        domicilioFliar: datos.dom_fliar.trim(),
+        enfermedadCronica: datos.enfermedad_cronica.trim(),
+        medicamentoRecibe: datos.medicamento_recibe.trim(),
+        noTolera: datos.no_tolera.trim(),
+        donante: datos.donante.trim(),
+        localidad: datos.localidad.trim(),
+        situacion: datos.situacion.trim(),
+        obraSocial: datos.obraSocial.trim(),
+        deriva: datos.deriva.trim(),
+        vencimiento: datos.fvencimiento_muestra,
+        img: datos.img_foto,
+      };
+      // console.log(ciudadano);
+      res.status(200).json({ ciudadano });
+    } else {
+      res.status(404).json({
+        results: `No se encontró carnet de sanidad para el DNI: ${dni}`,
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Error de servidor" });
+  }
+};
+
 module.exports = {
   obtenerCategorias,
   obtenerTiposDeReclamoPorCategoria,
@@ -778,4 +863,5 @@ module.exports = {
   existeLoginApp,
   obtenerTokenAutorizacion,
   credencial,
+  obtenerDatosCarnetSanidad,
 };
