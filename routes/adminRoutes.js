@@ -75,6 +75,7 @@ const {
   crearBannerImagenes,
   obtenerImagenesBanner,
   obtenerBanners,
+  imagenPreview,deshabilitarBanner,
 } = require("../controllers/adminControllers");
 
 // Configurar multer para manejar la carga de archivos (deberías incluir estas configuraciones también)
@@ -351,6 +352,8 @@ router.post("/agregarPatrimonio", agregarPatrimonio);
 router.post('/crearBannerImagenes', upload.single('imagen_banner'), crearBannerImagenes);
 router.post("/obtenerImagenesBanner", obtenerImagenesBanner);
 router.get("/obtenerBanners", obtenerBanners);
+router.get("/imagenPreview", imagenPreview);
+router.post("/deshabilitarBanner", deshabilitarBanner);
 router.post("/crearPatrimonioImagenes", parseMultipartFormData, crearPatrimonioImagenes);
 router.post("/editarPatrimonio", editarPatrimonio);
 router.post("/editarPatrimonioImagenes", parseMultipartFormData, editarPatrimonioImagenes);

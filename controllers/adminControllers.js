@@ -10,6 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const { conectarFTPCiudadano } = require("../config/winscpCiudadano");
 const { conectarSFTPCondor } = require("../config/winscpCondor");
+const { conectar_smt_Patrimonio_MySql } = require('../config/dbEstadisticasMYSQL');
 
 const agregarOpcion = async (req, res) => {
   let connection;
@@ -2054,7 +2055,7 @@ const editarUbicacionPatrimonio = async (req, res) => {
   }
 };
 
-const { conectar_smt_Patrimonio_MySql } = require('../config/dbEstadisticasMYSQL');
+
 
 const crearBannerImagenes = async (req, res) => {
   let sftp;
@@ -2174,7 +2175,92 @@ const obtenerImagenesBanner = async (req, res) => {
   }
 };
 
+const imagenPreview = async (req, res) => {
+  
+  let sftp;
+  const {nombre_banner} = req.query.banner;
+  console.log(nombre_banner, "nb");
+try {
+  try {
 
+    sftp = await conectarSFTPCondor();
+    if (!sftp || typeof sftp.put !== 'function') {
+      throw new Error("Conexión SFTP inválida o función 'put' no disponible.");
+    }
+    console.log("Conectado al servidor SFTP correctamente.");
+  } catch (sftpError) {
+    console.error("Error al conectar al SFTP:", sftpError);
+    return res.status(500).json({ message: "Error al conectar al servidor SFTP." });
+  }
+
+    const remotePath = "/var/www/vhosts/cidituc.smt.gob.ar/Fotos-Patrimonio/Banner/";
+    const carpetaBanner = `${remotePath}${nombre_banner}`;
+    console.log(carpetaBanner);
+    let bannerEncontrado = {}
+
+    const existeCarpeta = await sftp.exists(carpetaBanner);
+    if (!existeCarpeta) {
+      console.log(`La carpeta ${carpetaBanner} no existe.`);
+    }
+
+    const archivosRemotos = await sftp.list(remotePath);
+
+    const archivoRemoto = archivosRemotos.find(archivo => archivo.name === nombre_banner);
+
+    if (archivoRemoto) {
+      const remoteFilePath = `${carpetaBanner}`;
+      const buffer = await sftp.get(remoteFilePath);
+      const base64Image = buffer.toString("base64");
+
+      bannerEncontrado = {
+       base64Image,
+      };
+
+    return res.status(200).json({ banner: bannerEncontrado });    
+  } else {
+    return res.status(404).json({ message: "Archivo no encontrado." });
+  }
+} catch (error) {
+  console.error("Error al obtener los banners:", error);
+  res.status(500).json({ message: "Error al obtener los banners." });
+  
+}
+
+}
+const deshabilitarBanner = async (req, res) => {
+  let connection;
+  connection = await conectar_smt_Patrimonio_MySql();
+console.log(req.body);
+  try {
+
+    const {id, hab }= req.body;
+    if (id === undefined ||hab === undefined || req.body == "") {
+      return res
+        .status(400)
+        .json({ message: "El ID del banner es requerido" });
+    }
+
+    const sql = "UPDATE banner set habilita = ? WHERE id_banner = ?";
+    const values = [ !hab, id];
+
+    const [result] = await connection.execute(sql, values);
+    if (result.affectedRows > 0) {
+      res.status(200).json({ message: "banner deshabilitado con éxito" });
+    } else {
+      res.status(400).json({ message: "banner no encontrado" });
+    }
+  } catch (error) {
+    console.error("Error al eliminar el banner:", error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+    // res.status(500).json({
+    //   // message: `Error interno del servidor, ${req.body}`,
+    //   message: `Error interno del servidor,AAAAAAAAAAH`,
+    //   details: error.message,
+    // });
+  } finally {
+    connection.end();
+  }
+};
 // -------------------PATRIMOINIO MUNICIPAL--------------
 
 module.exports = {
@@ -2242,5 +2328,6 @@ module.exports = {
   crearBannerImagenes,
   obtenerImagenesBanner,
   obtenerBanners,
-
+  imagenPreview,
+  deshabilitarBanner,
 };
