@@ -2239,9 +2239,10 @@ console.log(req.body);
         .status(400)
         .json({ message: "El ID del banner es requerido" });
     }
-
+    
+    // const nuevoEstado = hab ? 0 : 1
     const sql = "UPDATE banner set habilita = ? WHERE id_banner = ?";
-    const values = [ !hab, id];
+    const values = [ hab, id];
 
     const [result] = await connection.execute(sql, values);
     if (result.affectedRows > 0) {
