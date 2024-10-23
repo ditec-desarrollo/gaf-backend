@@ -27,8 +27,8 @@ const router = Router();
 //------------------------------INGRESO CIUDADANO------------------------------//
 router.get("/existeLoginApp/:dni/:password", existeLoginApp); // VERIFICA EXISTENCIA DE USUARIO PARA DAR TOKEN DE INGRESO Y DATOS
 router.post("/obtenerTokenAutorizacion", verifyIngresoToken, obtenerTokenAutorizacion);  //OROTGA EL TOKEN DE AUTORIZACION PARA HACER PETICIONES
-router.get("/credencial/:dni", credencial); // VERIFICA EXISTENCIA DE USUARIO PARA DAR TOKEN DE INGRESO Y DATOS
-router.get("/obtenerDatosCarnetSanidad/:dni", obtenerDatosCarnetSanidad); // 
+router.get("/credencial/",Oauth, credencial); // VERIFICA EXISTENCIA DE USUARIO PARA DAR TOKEN DE INGRESO Y DATOS
+router.get("/obtenerDatosCarnetSanidad/",Oauth, obtenerDatosCarnetSanidad); // 
 //------------------------------INGRESO CIUDADANO------------------------------//
 
 
