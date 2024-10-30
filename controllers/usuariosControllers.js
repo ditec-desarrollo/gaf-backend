@@ -105,7 +105,7 @@ const enviarEmailLibreDeuda = (req, res) => {
       html: `<p>El Ciudadano Digital: <strong>${user.nombre_persona}, ${user.apellido_persona} </strong></p>
       <p>CUIL: <strong>${user.documento_persona}</strong></p>
       <p>TELEFONO: <strong>${user.telefono_persona}</strong></p>
-      <p>Solicita libre deuda de los siguentes dominios/DNI: <strong>${message}</strong></p>
+      <p>Solicita libre deuda del siguiente DOMINIO/DNI: <strong>${message}</strong></p>
       <p>Este correo debe ser respondido al email: <strong>${user.email_persona}</strong></p>`,
     };
 

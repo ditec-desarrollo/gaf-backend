@@ -25,6 +25,7 @@ const {
 } = require("../controllers/usuariosControllers");
 
 const verifyRole = require("../middlewares/verifyRole");
+const { obtenerMontos, obtenerMontosTipo, crearMonto, deshabilitarMonto, editarMonto, obtenerMonto } = require("../controllers/tribunalMunicipalDeFaltas");
 
 const router = Router();
 
@@ -66,8 +67,20 @@ router.put("/restablecerClave", restablecerClave);
 router.post("/registro", agregarUsuarioMYSQL);
 router.put("/email", enviarEmailValidacion);
 router.patch("/desactivar", desactivarUsuario);
-router.post("/consultaMulta",auth, enviarEmailMulta);
 
+
+//TRIBUNAL DE FALTAS
+router.post("/consultaMulta",auth, enviarEmailMulta);
 router.post("/obtenerLibreDeuda",auth, enviarEmailLibreDeuda);
+//GET
+router.get("/montos", auth,obtenerMontos);
+router.get("/obtenerMonto", auth,obtenerMonto);
+router.get("/montosTipo",auth, obtenerMontosTipo);
+//CREATE
+router.post("/crearMonto", auth, crearMonto);
+//DELETE ESTADO
+router.post("/deshabilitarMonto",auth, deshabilitarMonto);
+//EDIT
+router.patch("/editarMonto",auth, editarMonto);
 
 module.exports = router;
