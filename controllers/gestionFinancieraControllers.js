@@ -5,6 +5,7 @@ const Movimiento = require("../models/Financiera/Movimiento");
 const Expediente = require("../models/Financiera/Expediente");
 const { obtenerFechaEnFormatoDate } = require("../utils/helpers");
 const DetMovimientoNomenclador = require("../models/Financiera/DetMovimientoNomenclador");
+const { obtenerFechaDelServidor } = require("../utils/obtenerInfoDelServidor");
 
 const listarAnexos = async (req, res) => {
   let connection;
@@ -1110,7 +1111,7 @@ const partidaExistente = async (req, res) => {
 const agregarMovimiento = async (req, res) => {
   let transaction;
   try {
-    const { movimiento, detMovimiento,expediente, presupuesto, items, encuadreLegal } = req.body;
+    const { movimiento, detMovimiento,expediente, presupuesto, items, encuadreLegal, tipoDeCompra } = req.body;
 console.log(items);
 
     transaction = await sequelize.transaction();
@@ -1128,14 +1129,18 @@ console.log(items);
       transaction
     });
 
+    const {fecha_actual} =  await obtenerFechaDelServidor()
+    
     const movimientoObj = {
-      movimiento_fecha: movimiento.fecha,
+      // movimiento_fecha: movimiento.fecha,
+      movimiento_fecha: fecha_actual,
       expediente_id: nuevoExpediente.expediente_id,
       tipomovimiento_id: movimiento.tipomovimiento_id,
       tipoinstrumento_id: expediente.tipoDeInstrumento,
       instrumento_nro: expediente.numeroInstrumento,
       presupuesto_id: presupuesto,
-      encuadrelegal_id: encuadreLegal
+      encuadrelegal_id: encuadreLegal,
+      tipocompra_id: tipoDeCompra
     };
 
     const nuevoMovimiento = await Movimiento.create(movimientoObj, {
@@ -1188,7 +1193,7 @@ console.log(items);
 const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
   let transaction;
   try {
-    const { movimiento, detMovimiento,expediente, presupuesto , proveedor, items, encuadreLegal} = req.body;
+    const { movimiento, detMovimiento,expediente, presupuesto , proveedor, items, encuadreLegal, tipoDeCompra} = req.body;
 
     transaction = await sequelize.transaction();
 
@@ -1201,7 +1206,8 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
       tipoinstrumento_id: expediente.tipoDeInstrumento ? expediente.tipoDeInstrumento : null,
       instrumento_nro: expediente.numeroInstrumento? expediente.numeroInstrumento : null,
       proveedor_id: proveedor.id,
-      encuadrelegal_id: encuadreLegal
+      encuadrelegal_id: encuadreLegal,
+      tipocompra_id: tipoDeCompra
     };
 
     const nuevoMovimiento = await Movimiento.create(movimientoObj, {
@@ -1366,7 +1372,7 @@ const obtenerPresupuestosParaMovimientoPresupuestario = async (req, res) => {
 
 
 const modificarMovimiento = async (req, res) => {
-  const {  movimiento, detMovimiento, proveedor, items, encuadreLegal,expediente,tipoDeInstrumento } = req.body;
+  const {  movimiento, detMovimiento, proveedor, items, encuadreLegal,expediente,tipoDeInstrumento, tipoDeCompra } = req.body;
 
   let connection;
   try {
@@ -1397,8 +1403,8 @@ const modificarMovimiento = async (req, res) => {
       await connection.query("UPDATE movimiento SET tipoinstrumento_id = ?, instrumento_nro = ? WHERE movimiento_id = ?",[tipoDeInstrumento,expediente.numeroInstrumento,movimiento.id])
     }
 
-    if(encuadreLegal != null){
-      await connection.query("UPDATE movimiento SET encuadrelegal_id = ? WHERE movimiento_id = ?",[encuadreLegal, movimiento.id])
+    if(encuadreLegal != null && tipoDeCompra != null){
+      await connection.query("UPDATE movimiento SET encuadrelegal_id = ?, tipocompra_id = ? WHERE movimiento_id = ?",[encuadreLegal,tipoDeCompra, movimiento.id])
     }
 
       await connection.commit();
@@ -2277,9 +2283,11 @@ const agregarProveedor = async (req, res) => {
 
     // Consulta para insertar un nuevo proveedor
     const sqlInsertProveedor = `
-      INSERT INTO proveedores (proveedor_razsocial, proveedor_cuit, proveedor_domicilio, proveedor_email, proveedor_iva, proveedor_nroreso, proveedor_anioreso,proveedor_telefono,proveedor_contacto)
-      VALUES (?, ?, ?, ?, ?, ?, ?,?,?)
+      INSERT INTO proveedores (proveedor_razsocial, proveedor_cuit, proveedor_domicilio, proveedor_email, proveedor_iva, proveedor_nroreso, proveedor_anioreso,proveedor_telefono,proveedor_contacto, proveedor_registro)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
+
+    const {fecha_actual} =  await obtenerFechaDelServidor()
 
     // Ejecución de la consulta con los valores a insertar
     const [result] = await connection.execute(sqlInsertProveedor, [
@@ -2291,7 +2299,8 @@ const agregarProveedor = async (req, res) => {
       nroreso,
       anioreso,
       telefono,
-      contacto
+      contacto,
+      fecha_actual
     ]);
 
     // Verificar si alguna fila fue afectada (es decir, si el proveedor fue insertado)
@@ -2782,6 +2791,31 @@ const eliminarEncuadreLegal = async (req, res) => {
   }
 };
 
+const obtenerDatosItem = async (req,res) =>{
+  let connection;
+  const itemId = req.query.itemId;
+  console.log(itemId);
+  
+  try {
+    connection = await conectar_BD_GAF_MySql(); // Conexión a la base de datos
+
+    const sql = `SELECT * FROM item AS it JOIN anexo AS a ON it.anexo_id = a.anexo_id JOIN finalidad AS f ON it.finalidad_id = f.finalidad_id JOIN funcion AS fun ON it.funcion_id = fun.funcion_id WHERE item_id = ?`;
+    const [info] = await connection.execute(sql,[itemId]);
+
+    if (info.length > 0) {
+      res.status(200).json({ info });
+    } else {
+      res.status(204).json({ message: "No hay datos disponibles" });
+    }
+  } catch (error) {
+    console.error('Error al obtener los datos:', error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
 
 module.exports = {
   listarAnexos,
@@ -2848,7 +2882,7 @@ module.exports = {
   buscarExpedienteParaModificarPorTransferenciaEntrePartidas,
   obtenerNomencladores,
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
- obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras
+ obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem
 };
 
 

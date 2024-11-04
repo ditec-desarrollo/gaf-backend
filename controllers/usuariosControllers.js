@@ -93,6 +93,43 @@ const enviarEmailMulta = (req, res) => {
   }
 };
 
+const enviarEmailLibreDeuda = (req, res) => {
+  try {
+    // console.log("a", req.body);
+    const { user, message, recipient, subject } = req.body;
+    const mailOptions = {
+      from: `SMT - Ciudadano Digital <no-reply-cdigital@smt.gob.ar>`,
+      to: recipient,
+      subject: `${subject} ${user.nombre_persona}, ${user.apellido_persona} ${user.documento_persona}`,
+      // html: `<p><strong style="font-size: 24px;">${message}</strong></p>`,
+      html: `<p>El Ciudadano Digital: <strong>${user.nombre_persona}, ${user.apellido_persona} </strong></p>
+      <p>CUIL: <strong>${user.documento_persona}</strong></p>
+      <p>TELEFONO: <strong>${user.telefono_persona}</strong></p>
+      <p>Solicita libre deuda del siguiente DOMINIO/DNI: <strong>${message}</strong></p>
+      <p>Este correo debe ser respondido al email: <strong>${user.email_persona}</strong></p>`,
+    };
+
+    transporter.sendMail(mailOptions, (errorEmail, info) => {
+      if (errorEmail) {
+        console.log("error al enviar correo");
+        return res.status(500).json({
+          mge: "Error al enviar el correo electrónico:",
+          ok: false,
+          error: errorEmail,
+        });
+      } else {
+        console.log("email enviado");
+        return res
+          .status(200)
+          .json({ mge: "Correo electrónico enviado correctamente:", ok: true });
+      }
+    });
+  } catch (error) {
+    console.log("Error al enviar email");
+    console.error("Error al enviar email de multas:", error);
+  }
+};
+
 const generarCodigo = (numero) => {
   const numeroInvertido = parseInt(
     numero.toString().split("").reverse().join("")
@@ -439,6 +476,7 @@ const editarUsuarioCompleto = async (req, res) => {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
   } catch (error) {
+    console.log(error);
     return res
       .status(500)
       .json({ message: error.message || "Algo salió mal :(" });
@@ -952,4 +990,5 @@ module.exports = {
   restablecerClave,
   desactivarUsuario,
   enviarEmailMulta,
+  enviarEmailLibreDeuda
 };
