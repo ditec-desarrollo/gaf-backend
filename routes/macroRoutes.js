@@ -19,7 +19,8 @@ const {
   existeLoginApp,
   obtenerTokenAutorizacion,
   credencial,
-  obtenerDatosCarnetSanidad
+  obtenerDatosCarnetSanidad,
+  agregarUsuario
 } = require("../controllers/macroControllers");
 
 const router = Router();
@@ -29,6 +30,7 @@ router.get("/existeLoginApp/:dni/:password", existeLoginApp); // VERIFICA EXISTE
 router.post("/obtenerTokenAutorizacion", verifyIngresoToken, obtenerTokenAutorizacion);  //OROTGA EL TOKEN DE AUTORIZACION PARA HACER PETICIONES
 router.get("/credencial/",Oauth, credencial); // VERIFICA EXISTENCIA DE USUARIO PARA DAR TOKEN DE INGRESO Y DATOS
 router.get("/obtenerDatosCarnetSanidad/",Oauth, obtenerDatosCarnetSanidad); // 
+router.post("/altaUsuario", agregarUsuario); // 
 //------------------------------INGRESO CIUDADANO------------------------------//
 
 
