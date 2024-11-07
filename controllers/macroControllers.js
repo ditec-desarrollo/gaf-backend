@@ -16,6 +16,9 @@ const CustomError = require("../utils/customError");
 const jwt = require("jsonwebtoken");
 const QRCode = require("qrcode");
 const { conectarBaseDeDatosSanidad } = require("../config/dbSQLSanidad");
+const { sequelize_ciu_digital_derivador } = require("../config/sequelize");
+const moment = require("moment-timezone");
+// const nodemailer = require("nodemailer");
 
 const obtenerCategorias = async (req, res) => {
   const connection = await conectarMySql();
@@ -846,6 +849,220 @@ const obtenerDatosCarnetSanidad = async (req, res) => {
   }
 };
 
+//VALIDACION DE EMPLEADO PARA ASIGNAR TIPO DE USUARIO
+const validarEmpleado = async (cuil) => {
+  try {
+    const JSONdata = JSON.stringify({
+      tarea: "legajo_municipal",
+      cuil: cuil,
+    });
+    const endpoint = "http://181.105.6.205:82/api_civitas/ciudadano.php";
+
+    const options = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSONdata,
+    };
+    const response = await fetch(endpoint, options);
+
+    const result = await response.json();
+    console.log(result.legajo[0]);
+    return result;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+// const transporter = nodemailer.createTransport({
+//   // host: 'smtp.gmail.com',
+//   service: "gmail",
+//   // port: 465,
+//   // secure: true,
+//   auth: {
+//     user: "no-reply-cdigital@smt.gob.ar",
+//     pass: process.env.PASSWORD_MAIL,
+//   },
+// });
+
+// const enviarEmail = (codigo, email, cuil) => {
+//   try {
+//     const mailOptions = {
+//       from: "SMT-Ciudadano Digital <no-reply-cdigital@smt.gob.ar>",
+//       to: email,
+//       subject: "Código de validación",
+//       // text: `Tu código de validación es: ${codigo}. Para visualizar su credencial de Ciudadano Digital ingrese al siguiente link: https://ciudaddigital.smt.gob.ar/#/credencialesCiudadano/${cuil}`,
+//       html: `<p>Tu código de validación es: <strong style="font-size: 24px;">${codigo}</strong></p>`,
+//     };
+
+//     transporter.sendMail(mailOptions, (errorEmail, info) => {
+//       if (errorEmail) {
+//         console.log("error al enviar correo");
+//         // return res.status(500).json({ mge: 'Error al enviar el correo electrónico:', ok: false, error: errorEmail });
+//       } else {
+//         // return res.status(200).json({mge:'Correo electrónico enviado correctamente:',ok: true});
+//         console.log("email enviado");
+//       }
+//     });
+//   } catch (error) {
+//     console.log("error al enviar email");
+//   }
+// };
+
+// const generarCodigo = (numero) => {
+//   const numeroInvertido = parseInt(
+//     numero.toString().split("").reverse().join("")
+//   );
+//   const ultimosCuatroDigitos = numeroInvertido % 10000;
+//   return ultimosCuatroDigitos;
+// };
+
+const agregarUsuario = async (req, res) => {
+  let connection;
+  try {
+    const {
+      cuil,
+      nombre_persona,
+      apellido_persona,
+      email_persona,
+      password,
+      telefono_persona,
+      domicilio_persona,
+      //id_provincia,
+      localidad_persona,
+      //id_pais,
+      fecha_nacimiento_persona,
+      id_genero,
+      //validado,
+      //habilita,
+    } = req.body;
+
+    console.log(req.body);
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const fechaStr = fecha_nacimiento_persona;
+    const fechaFormateada = moment(fechaStr).format("YYYY-MM-DD");
+
+    // const codigoValidacion = generarCodigo(documento_persona);
+
+    connection = await conectarBDEstadisticasMySql();
+
+    // Consultar si ya existe un usuario con el mismo email o documento
+    const [resultEmail] = await connection.query(
+      "SELECT * FROM persona WHERE email_persona = ?",
+      [email_persona]
+    );
+    if (resultEmail.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "Email ya registrado", userEmail: email_persona });
+    }
+    if (telefono_persona.length !== 10) {
+      return res.status(400).json({
+        message: "El telefono debe tener 10 números",
+        userTel: telefono_persona,
+      });
+    }
+    const [resultDocumento] = await connection.query(
+      "SELECT * FROM persona WHERE documento_persona = ?",
+      [cuil]
+    );
+    if (resultDocumento.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "DNI ya registrado", userDNI: cuil });
+    }
+
+    const empleadoValidado = await validarEmpleado(cuil);
+
+    if (empleadoValidado && empleadoValidado?.legajo[0] !== null) {
+      // Se encontró un legajo
+      // Iniciar una transacción
+      const transaction = await sequelize_ciu_digital_derivador.transaction();
+
+      const [resultReparticion] = await connection.query(
+        "SELECT * FROM reparticion WHERE reparticion.habilita = 1 AND reparticion.item = ?",
+        [empleadoValidado.legajo[0].codi_17]
+      );
+
+      let id_rep = resultReparticion[0]?.id_reparticion;
+      let usuarioEmpleado = 4;
+      // Insertar el nuevo usuario con legajo
+      const nuevaPersona = await Persona.create(
+        {
+          cuil,
+          nombre_persona: nombre_persona.toUpperCase(),
+          apellido_persona: apellido_persona.toUpperCase(),
+          email_persona,
+          password: hashedPassword,
+          telefono_persona,
+          domicilio_persona: domicilio_persona?.toUpperCase(),
+          id_provincia: 1,
+          id_pais: 1,
+          localidad_persona: localidad_persona?.toUpperCase(),
+          fecha_nacimiento_persona: fechaFormateada,
+          id_genero,
+          id_tdocumento: 1,
+          id_tusuario: usuarioEmpleado,
+        },
+        { transaction }
+      );
+      const [resultPersona] = await connection.query(
+        "SELECT * FROM persona p WHERE p.documento_persona = ?",
+        [cuil]
+      );
+      let id_per = resultPersona[0].id_persona;
+      let afil = empleadoValidado.legajo[0].lega_12;
+      const nuevoEmpleado = await Empleado.create(
+        {
+          id_persona: id_per,
+          afiliado: afil,
+          id_reparticion: id_rep ? id_rep : 1,
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
+    } else {
+      // No se encontró un legajo
+      console.log("No se encontró un legajo");
+      // Insertar el nuevo usuario
+      const [resultInsert] = await connection.query(
+        "INSERT INTO persona (documento_persona, nombre_persona, apellido_persona, email_persona, clave, telefono_persona, domicilio_persona, id_provincia, id_pais, localidad_persona, validado, habilita, fecha_nacimiento_persona, id_genero) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,  ?, ?, ?)",
+        [
+          cuil,
+          nombre_persona.toUpperCase(),
+          apellido_persona.toUpperCase(),
+          email_persona,
+          hashedPassword,
+          telefono_persona,
+          "", //domicilio_persona?.toUpperCase(),
+          1, //id_provincia,
+          1, //id_pais,
+          "", //localidad_persona?.toUpperCase(),
+          1, //validado
+          1, //habilita
+          fechaFormateada,
+          id_genero,
+        ]
+      );
+    }
+    // Enviar correo electrónico al usuario recién registrado
+    //enviarEmail(codigoValidacion, email_persona, documento_persona);
+
+    await connection.end();
+    res.status(200).json({ message: "Ciudadano creado con éxito", ok: true });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
+
 module.exports = {
   obtenerCategorias,
   obtenerTiposDeReclamoPorCategoria,
@@ -864,4 +1081,5 @@ module.exports = {
   obtenerTokenAutorizacion,
   credencial,
   obtenerDatosCarnetSanidad,
+  agregarUsuario,
 };
