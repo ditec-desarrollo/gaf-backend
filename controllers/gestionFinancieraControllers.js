@@ -5,6 +5,7 @@ const Movimiento = require("../models/Financiera/Movimiento");
 const Expediente = require("../models/Financiera/Expediente");
 const { obtenerFechaEnFormatoDate } = require("../utils/helpers");
 const DetMovimientoNomenclador = require("../models/Financiera/DetMovimientoNomenclador");
+const { obtenerFechaDelServidor } = require("../utils/obtenerInfoDelServidor");
 
 const listarAnexos = async (req, res) => {
   let connection;
@@ -1110,7 +1111,7 @@ const partidaExistente = async (req, res) => {
 const agregarMovimiento = async (req, res) => {
   let transaction;
   try {
-    const { movimiento, detMovimiento,expediente, presupuesto, items, encuadreLegal } = req.body;
+    const { movimiento, detMovimiento,expediente, presupuesto, items, encuadreLegal, tipoDeCompra } = req.body;
 console.log(items);
 
     transaction = await sequelize.transaction();
@@ -1128,14 +1129,18 @@ console.log(items);
       transaction
     });
 
+    const {fecha_actual} =  await obtenerFechaDelServidor()
+    
     const movimientoObj = {
-      movimiento_fecha: movimiento.fecha,
+      // movimiento_fecha: movimiento.fecha,
+      movimiento_fecha: fecha_actual,
       expediente_id: nuevoExpediente.expediente_id,
       tipomovimiento_id: movimiento.tipomovimiento_id,
       tipoinstrumento_id: expediente.tipoDeInstrumento,
       instrumento_nro: expediente.numeroInstrumento,
       presupuesto_id: presupuesto,
-      encuadrelegal_id: encuadreLegal
+      encuadrelegal_id: encuadreLegal,
+      tipocompra_id: tipoDeCompra
     };
 
     const nuevoMovimiento = await Movimiento.create(movimientoObj, {
@@ -1188,7 +1193,7 @@ console.log(items);
 const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
   let transaction;
   try {
-    const { movimiento, detMovimiento,expediente, presupuesto , proveedor, items, encuadreLegal} = req.body;
+    const { movimiento, detMovimiento,expediente, presupuesto , proveedor, items, encuadreLegal, tipoDeCompra} = req.body;
 
     transaction = await sequelize.transaction();
 
@@ -1198,10 +1203,11 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
       tipomovimiento_id: movimiento.tipomovimiento_id,
       movimiento_id2: movimiento.id,
       presupuesto_id: presupuesto,
-      tipoinstrumento_id: expediente.tipoDeInstrumento,
-      instrumento_nro: expediente.numeroInstrumento,
+      tipoinstrumento_id: expediente.tipoDeInstrumento ? expediente.tipoDeInstrumento : null,
+      instrumento_nro: expediente.numeroInstrumento? expediente.numeroInstrumento : null,
       proveedor_id: proveedor.id,
-      encuadrelegal_id: encuadreLegal
+      encuadrelegal_id: encuadreLegal,
+      tipocompra_id: tipoDeCompra
     };
 
     const nuevoMovimiento = await Movimiento.create(movimientoObj, {
@@ -1366,7 +1372,7 @@ const obtenerPresupuestosParaMovimientoPresupuestario = async (req, res) => {
 
 
 const modificarMovimiento = async (req, res) => {
-  const {  movimiento, detMovimiento, proveedor, items, encuadreLegal } = req.body;
+  const {  movimiento, detMovimiento, proveedor, items, encuadreLegal,expediente,tipoDeInstrumento, tipoDeCompra } = req.body;
 
   let connection;
   try {
@@ -1393,8 +1399,12 @@ const modificarMovimiento = async (req, res) => {
       await connection.query("UPDATE movimiento SET proveedor_id = ? WHERE movimiento_id = ?",[proveedor.id, movimiento.id])
     }
 
-    if(encuadreLegal != null){
-      await connection.query("UPDATE movimiento SET encuadrelegal_id = ? WHERE movimiento_id = ?",[encuadreLegal, movimiento.id])
+    if( tipoDeInstrumento!== "" && expediente.numeroInstrumento !==""){
+      await connection.query("UPDATE movimiento SET tipoinstrumento_id = ?, instrumento_nro = ? WHERE movimiento_id = ?",[tipoDeInstrumento,expediente.numeroInstrumento,movimiento.id])
+    }
+
+    if(encuadreLegal != null && tipoDeCompra != null){
+      await connection.query("UPDATE movimiento SET encuadrelegal_id = ?, tipocompra_id = ? WHERE movimiento_id = ?",[encuadreLegal,tipoDeCompra, movimiento.id])
     }
 
       await connection.commit();
@@ -1411,6 +1421,25 @@ const modificarMovimiento = async (req, res) => {
   }
 };
 
+const modificarMovimientoAltaDeCompromiso= async (req, res) => {
+  const { expediente, tipoDeInstrumento, movimiento} = req.body;
+
+  let connection;
+  try {
+    connection = await conectar_BD_GAF_MySql();
+    await connection.query("UPDATE movimiento SET tipoinstrumento_id = ?, instrumento_nro = ? WHERE movimiento_id = ?",[tipoDeInstrumento,expediente.numeroInstrumento,movimiento.id])
+    res.status(200).json({ message: 'Movimiento actualizado correctamente' });
+  } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: 'Error al actualizar el instrumento del movimiento', error });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
+
 const buscarExpediente = async (req, res) => {
   let connection;
   try {
@@ -1419,21 +1448,12 @@ const buscarExpediente = async (req, res) => {
     const tipomovimiento_id = req.query.tipomovimiento_id;
     const anio = req.query.anio;
 
-//     const query = `SELECT e.expediente_id,e.item_id,e.expediente_numero,e.expediente_anio,e.expediente_causante,e.expediente_asunto,e.expediente_fecha,e.expediente_detalle , m.presupuesto_id,m.movimiento_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,
-// ti.tipoinstrumento_det, d.detmovimiento_id,d.detpresupuesto_id,d.detmovimiento_importe,dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones,
-// i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id
-// FROM expediente AS e 
-// LEFT JOIN movimiento AS m ON e.expediente_id = m.expediente_id 
-// LEFT JOIN tipoinstrumento AS ti ON m.tipoinstrumento_id = ti.tipoinstrumento_id LEFT JOIN detmovimiento AS d ON m.movimiento_id = d.movimiento_id 
-// LEFT JOIN detpresupuesto AS dp ON d.detpresupuesto_id = dp.detpresupuesto_id 
-// LEFT JOIN item AS i ON dp.item_id = i.item_id LEFT JOIN partidas AS pda ON dp.partida_id=pda.partida_id  WHERE e.expediente_numero = ? AND m.tipomovimiento_id = ? AND e.expediente_anio = ?
-//     `;
-
     // Primera consulta: Obtener los detalles del expediente
     const query1 = `
-    SELECT e.*, m.presupuesto_id,m.movimiento_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,m.encuadrelegal_id, prov.*, d.detmovimiento_id,d.detpresupuesto_id,d.detmovimiento_importe, dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones, i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id
+    SELECT e.*, m.presupuesto_id,m.movimiento_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,m.encuadrelegal_id, prov.*, d.detmovimiento_id,d.detpresupuesto_id,d.detmovimiento_importe, dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones, i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id
     FROM expediente AS e
     LEFT JOIN movimiento AS m ON e.expediente_id = m.expediente_id
+    LEFT JOIN encuadrelegal AS el ON m.encuadrelegal_id = el.encuadrelegal_id 
     LEFT JOIN proveedores AS prov ON m.proveedor_id = prov.proveedor_id
     LEFT JOIN detmovimiento AS d ON m.movimiento_id = d.movimiento_id
     LEFT JOIN detpresupuesto AS dp ON d.detpresupuesto_id = dp.detpresupuesto_id
@@ -1443,11 +1463,12 @@ const buscarExpediente = async (req, res) => {
     AND m.tipomovimiento_id = ? 
     AND e.expediente_anio = ? 
 `;
-    const [result1] = await connection.execute(query1, [numero, tipomovimiento_id == 5 ? 4 : tipomovimiento_id == 4 ? 1 : tipomovimiento_id, anio]);
+    const [result1] = await connection.execute(query1, [numero, tipomovimiento_id == 5 || tipomovimiento_id == 6 ? 4 : tipomovimiento_id == 4 ? 1 : tipomovimiento_id, anio]);
 console.log(result1);
+
     // Obtener los `movimiento_id` para la segunda consulta
     const movimientoIds = result1.map(row => row.movimiento_id);
-    console.log(movimientoIds);
+    // console.log(movimientoIds);
 
     if (movimientoIds.length > 0) {
       // Segunda consulta: Obtener los `movimiento_id` a excluir
@@ -1456,8 +1477,9 @@ console.log(result1);
         FROM movimiento AS definitiva 
         WHERE definitiva.movimiento_id2 IN (${movimientoIds.join(', ')})
     `;
-    console.log(query2);
+    // console.log(query2);
       const [result2] = await connection.execute(query2);
+console.log(result2);
 
       // Responder al cliente con los resultados de ambas consultas
       const response1 = result1; // Resultado de la primera consulta
@@ -1470,17 +1492,24 @@ console.log(result1);
       };
 
       // Enviar la respuesta al cliente
-      console.log(response);
-      if (response.primeraConsulta.length > 0 && response.segundaConsulta.length > 0 && tipomovimiento_id == 5) {
+      // console.log(response);
+      if (response.primeraConsulta.length > 0 && response.segundaConsulta.length > 0 && tipomovimiento_id == 6) {
+        res.status(200).json(response.primeraConsulta);
+      }
+      else if (response.primeraConsulta.length > 0 && response.segundaConsulta.length == 0 && tipomovimiento_id == 5 && response.primeraConsulta[0]?.tipoinstrumento_id == 0) {
+        throw new Error("Le falta registro de compromiso")
+      }
+      else if (response.primeraConsulta.length > 0 && response.segundaConsulta.length > 0 && tipomovimiento_id == 5) {
         throw new Error("Ya tiene compromiso")
-      } else if(response.primeraConsulta.length > 0 && response.segundaConsulta.length > 0 && tipomovimiento_id == 4){
+      } else if (response.primeraConsulta.length > 0 && response.segundaConsulta.length > 0 && tipomovimiento_id == 4) {
         throw new Error("Ya tiene reserva")
-      }else if (response.primeraConsulta.length > 0 && response.segundaConsulta.length == 0) {
+      } else if (response.primeraConsulta.length > 0 && response.segundaConsulta.length == 0) {
         res.status(200).json(response.primeraConsulta);
       }
 
     } else {
       // Si no hay movimientoIds, solo responde con el resultado de la primera consulta
+// console.log(result1);
 
       if (result1.length > 0) {
 
@@ -1543,9 +1572,10 @@ const buscarExpedienteParaModificarDefinitiva = async (req, res) => {
 
     const query = `SELECT e.expediente_id,e.item_id,e.expediente_numero,e.expediente_anio,e.expediente_causante,e.expediente_asunto,e.expediente_fecha,e.expediente_detalle , m.presupuesto_id,m.movimiento_id,m.encuadrelegal_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,prov.*,
 ti.tipoinstrumento_det, d.detmovimiento_id,d.detpresupuesto_id,d.detpresupuesto_id2,d.detmovimiento_importe,dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones,
-i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id
+i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id
 FROM expediente AS e 
 LEFT JOIN movimiento AS m ON e.expediente_id = m.expediente_id 
+LEFT JOIN encuadrelegal AS el ON m.encuadrelegal_id = el.encuadrelegal_id 
 LEFT JOIN proveedores AS prov ON m.proveedor_id = prov.proveedor_id
 LEFT JOIN tipoinstrumento AS ti ON m.tipoinstrumento_id = ti.tipoinstrumento_id 
 LEFT JOIN detmovimiento AS d ON m.movimiento_id = d.movimiento_id 
@@ -2253,9 +2283,11 @@ const agregarProveedor = async (req, res) => {
 
     // Consulta para insertar un nuevo proveedor
     const sqlInsertProveedor = `
-      INSERT INTO proveedores (proveedor_razsocial, proveedor_cuit, proveedor_domicilio, proveedor_email, proveedor_iva, proveedor_nroreso, proveedor_anioreso,proveedor_telefono,proveedor_contacto)
-      VALUES (?, ?, ?, ?, ?, ?, ?,?,?)
+      INSERT INTO proveedores (proveedor_razsocial, proveedor_cuit, proveedor_domicilio, proveedor_email, proveedor_iva, proveedor_nroreso, proveedor_anioreso,proveedor_telefono,proveedor_contacto, proveedor_registro)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
+
+    const {fecha_actual} =  await obtenerFechaDelServidor()
 
     // Ejecución de la consulta con los valores a insertar
     const [result] = await connection.execute(sqlInsertProveedor, [
@@ -2267,7 +2299,8 @@ const agregarProveedor = async (req, res) => {
       nroreso,
       anioreso,
       telefono,
-      contacto
+      contacto,
+      fecha_actual
     ]);
 
     // Verificar si alguna fila fue afectada (es decir, si el proveedor fue insertado)
@@ -2485,6 +2518,32 @@ const obtenerEncuadres = async (req, res) => {
     }
   }
 };
+
+const obtenerTiposDeCompras = async (req,res) => {
+  let connection;
+  try {
+    connection = await conectar_BD_GAF_MySql(); // Conexión a la base de datos
+
+    // Consulta para obtener los nomencladores y realizar el JOIN con la tabla partidas
+    const sqlEncuadres = `
+      SELECT * FROM tipocompra`;
+
+    // Ejecutar la consulta
+    const [tiposDeCompras] = await connection.execute(sqlEncuadres);
+
+    // Enviar los resultados como respuesta
+    res.status(200).json({ tiposDeCompras });
+  } catch (error) {
+    // Manejo de errores detallado
+    console.error('Error al obtener los tipos de compra:', error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
 
 const agregarNomenclador = async (req, res) => {
   let connection;
@@ -2772,6 +2831,31 @@ const eliminarEncuadreLegal = async (req, res) => {
   }
 };
 
+const obtenerDatosItem = async (req,res) =>{
+  let connection;
+  const itemId = req.query.itemId;
+  console.log(itemId);
+  
+  try {
+    connection = await conectar_BD_GAF_MySql(); // Conexión a la base de datos
+
+    const sql = `SELECT * FROM item AS it JOIN anexo AS a ON it.anexo_id = a.anexo_id JOIN finalidad AS f ON it.finalidad_id = f.finalidad_id JOIN funcion AS fun ON it.funcion_id = fun.funcion_id WHERE item_id = ?`;
+    const [info] = await connection.execute(sql,[itemId]);
+
+    if (info.length > 0) {
+      res.status(200).json({ info });
+    } else {
+      res.status(204).json({ message: "No hay datos disponibles" });
+    }
+  } catch (error) {
+    console.error('Error al obtener los datos:', error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
 
 module.exports = {
   listarAnexos,
@@ -2838,7 +2922,7 @@ module.exports = {
   buscarExpedienteParaModificarPorTransferenciaEntrePartidas,
   obtenerNomencladores,
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
- obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal,obtenerTiposCompra
+ obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem
 };
 
 

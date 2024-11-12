@@ -113,4 +113,49 @@ const conectar_BD_GED_MySql = async () => {
     }
 }
 
-module.exports = { conectarBDEstadisticasMySql, conectar_BD_GAF_MySql, conectar_BD_EDUCACION_MySql, conectarSMTContratacion, conectarSMTPatrimonio,conectar_BD_GED_MySql} 
+const conectar_smt_Patrimonio_MySql = async () => {
+    try {
+        const connection = await mysql.createConnection({
+            host: '172.16.8.214',
+            user: 'usuario_desarrollo',
+            port: '3306',
+            password: 'dev2024',
+            database: 'smt_patrimonio',
+        });
+        return connection
+    } catch (error) {
+        console.log(error.message);
+    }
+}
+
+const conectar_BD_Gestion_MySql = async () => {
+    try {
+        const connection = await mysql.createConnection({
+            host: process.env.HOST_CIU_DIGITAL,
+            user: process.env.USER_CIU_DIGITAL,
+            port: process.env.PORT_CIU_DIGITAL,
+            password: process.env.PASSWORD_CIU_DIGITAL,
+            database: process.env.DB_GESTION,
+        });
+        return connection
+    } catch (error) {
+        console.log(error.message);
+    }
+}
+
+const conectar_BD_Tribunal_De_Faltas_MySql = async () => {
+    try {
+        const connection = await mysql.createConnection({
+            host: process.env.HOST_CIU_DIGITAL,
+            user: process.env.USER_CIU_DIGITAL,
+            port: process.env.PORT_CIU_DIGITAL,
+            password: process.env.PASSWORD_CIU_DIGITAL,
+            database: process.env.DB_TRIBUNAL,
+        });
+        return connection
+    } catch (error) {
+        console.log(error.message);
+    }
+}
+
+module.exports = { conectarBDEstadisticasMySql, conectar_BD_GAF_MySql, conectar_BD_EDUCACION_MySql, conectarSMTContratacion, conectarSMTPatrimonio,conectar_BD_GED_MySql, conectar_BD_Gestion_MySql, conectar_BD_Tribunal_De_Faltas_MySql, conectar_smt_Patrimonio_MySql} 

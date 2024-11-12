@@ -39,7 +39,10 @@ const enviarEmail = (codigo, email, cuil) => {
       to: email,
       subject: "Código de validación",
       // text: `Tu código de validación es: ${codigo}. Para visualizar su credencial de Ciudadano Digital ingrese al siguiente link: https://ciudaddigital.smt.gob.ar/#/credencialesCiudadano/${cuil}`,
-      html: `<p>Tu código de validación es: <strong style="font-size: 24px;">${codigo}</strong></p>`,
+      //link https://ciudaddigital.smt.gob.ar/#/validarPorLink/${email}/${codigo}
+      html: `<p>Tu código de validación es: <strong style="font-size: 24px;">${codigo}</strong></p> <br/> 
+      También puede validar su usuario ingresando al siguiente link https://ciudaddigital.smt.gob.ar/#/validacionPorLink/${email}/${codigo}`,
+      
     };
 
     transporter.sendMail(mailOptions, (errorEmail, info) => {
@@ -69,6 +72,43 @@ const enviarEmailMulta = (req, res) => {
       <p>CUIL: <strong>${user.documento_persona}</strong></p>
       <p>TELEFONO: <strong>${user.telefono_persona}</strong></p>
       <p>Solicita el estado de multas de los siguentes dominios: <strong>${message}</strong></p>
+      <p>Este correo debe ser respondido al email: <strong>${user.email_persona}</strong></p>`,
+    };
+
+    transporter.sendMail(mailOptions, (errorEmail, info) => {
+      if (errorEmail) {
+        console.log("error al enviar correo");
+        return res.status(500).json({
+          mge: "Error al enviar el correo electrónico:",
+          ok: false,
+          error: errorEmail,
+        });
+      } else {
+        console.log("email enviado");
+        return res
+          .status(200)
+          .json({ mge: "Correo electrónico enviado correctamente:", ok: true });
+      }
+    });
+  } catch (error) {
+    console.log("Error al enviar email");
+    console.error("Error al enviar email de multas:", error);
+  }
+};
+
+const enviarEmailLibreDeuda = (req, res) => {
+  try {
+    // console.log("a", req.body);
+    const { user, message, recipient, subject } = req.body;
+    const mailOptions = {
+      from: `SMT - Ciudadano Digital <no-reply-cdigital@smt.gob.ar>`,
+      to: recipient,
+      subject: `${subject} ${user.nombre_persona}, ${user.apellido_persona} ${user.documento_persona}`,
+      // html: `<p><strong style="font-size: 24px;">${message}</strong></p>`,
+      html: `<p>El Ciudadano Digital: <strong>${user.nombre_persona}, ${user.apellido_persona} </strong></p>
+      <p>CUIL: <strong>${user.documento_persona}</strong></p>
+      <p>TELEFONO: <strong>${user.telefono_persona}</strong></p>
+      <p>Solicita libre deuda del siguiente DOMINIO/DNI: <strong>${message}</strong></p>
       <p>Este correo debe ser respondido al email: <strong>${user.email_persona}</strong></p>`,
     };
 
@@ -439,6 +479,7 @@ const editarUsuarioCompleto = async (req, res) => {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
   } catch (error) {
+    console.log(error);
     return res
       .status(500)
       .json({ message: error.message || "Algo salió mal :(" });
@@ -952,4 +993,5 @@ module.exports = {
   restablecerClave,
   desactivarUsuario,
   enviarEmailMulta,
+  enviarEmailLibreDeuda
 };

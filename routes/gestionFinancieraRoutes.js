@@ -78,7 +78,9 @@ const {
     editarEncuadreLegal,
     agregarEncuadreLegal,
     eliminarEncuadreLegal,
-    obtenerTiposCompra
+    modificarMovimientoAltaDeCompromiso,
+    obtenerTiposDeCompras,
+    obtenerDatosItem
   } = require("../controllers/gestionFinancieraControllers");
   
 
@@ -140,7 +142,7 @@ router.post("/movimiento/alta",agregarMovimiento)
 router.post("/movimiento/altaDefinitivaPreventiva",agregarMovimientoDefinitivaPreventiva)
 router.post("/movimiento/altaPorTransferenciaEntrePartidas",agregarMovimientoPorTransferenciaDePartidas)
 router.patch("/movimiento/editarPorTransferenciaEntrePartidas",modificarMovimientoParaTransferenciaEntrePartidas)
-
+router.patch("/movimiento/editarAltaDeCompromiso",modificarMovimientoAltaDeCompromiso)
 router.patch("/movimiento/editar",modificarMovimiento)
 router.get("/movimiento/tipoInstrumento", obtenerTiposDeInstrumentos)
 
@@ -189,8 +191,8 @@ router.put("/encuadrelegal/editar", editarEncuadreLegal);
 router.post("/encuadrelegal/agregar", agregarEncuadreLegal);
 router.delete("/encuadrelegal/eliminar/:idEliminar", eliminarEncuadreLegal);
 
-router.get("/tiposCompra/listar", obtenerTiposCompra)
+router.get("/tipocompra/listar", obtenerTiposDeCompras)
 
-
+router.get("/obtenerDatosItem", obtenerDatosItem)
 
 module.exports = router;

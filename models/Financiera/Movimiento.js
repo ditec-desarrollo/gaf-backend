@@ -46,6 +46,10 @@ const Movimiento = sequelize.define('Movimiento', {
   encuadrelegal_id:{
     type: DataTypes.INTEGER,
     allowNull: true
+  },
+  tipocompra_id:{
+    type: DataTypes.INTEGER,
+    allowNull: true
   }
 },{
     tableName: 'movimiento',
