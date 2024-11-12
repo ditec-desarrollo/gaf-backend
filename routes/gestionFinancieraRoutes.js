@@ -77,7 +77,8 @@ const {
     obtenerEncuadresLegales,
     editarEncuadreLegal,
     agregarEncuadreLegal,
-    eliminarEncuadreLegal
+    eliminarEncuadreLegal,
+    obtenerTiposCompra
   } = require("../controllers/gestionFinancieraControllers");
   
 
@@ -187,6 +188,8 @@ router.get("/encuadrelegal/listar", obtenerEncuadresLegales);
 router.put("/encuadrelegal/editar", editarEncuadreLegal);
 router.post("/encuadrelegal/agregar", agregarEncuadreLegal);
 router.delete("/encuadrelegal/eliminar/:idEliminar", eliminarEncuadreLegal);
+
+router.get("/tiposCompra/listar", obtenerTiposCompra)
 
 
 
