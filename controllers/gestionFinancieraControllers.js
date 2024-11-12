@@ -2692,23 +2692,53 @@ const obtenerEncuadresLegales = async (req, res) => {
   }
 };
 
-const agregarEncuadreLegal = async (req, res) => {
+const obtenerTiposCompra = async (req, res) => {
   let connection;
   try {
     connection = await conectar_BD_GAF_MySql(); // Conexión a la base de datos
 
-    const { encuadrelegal_det } = req.body;
+    const sqlTiposCompra = `SELECT * FROM tipocompra`;
+    const [tiposCompra] = await connection.execute(sqlTiposCompra);
 
-    if (!encuadrelegal_det) {
-      return res.status(400).json({ message: "El detalle del encuadre legal es requerido", ok: false });
+    if (tiposCompra.length > 0) {
+      res.status(200).json({ tiposCompra });
+    } else {
+      res.status(204).json({ message: "No hay datos disponibles" });
+    }
+  } catch (error) {
+    console.error('Error al obtener los tipos de compra:', error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
+
+const agregarEncuadreLegal = async (req, res) => { 
+  let connection;
+  try {
+    connection = await conectar_BD_GAF_MySql(); // Conexión a la base de datos
+
+    const { encuadrelegal_det, encuadrelegal_nombre, tipocompra_id, encuadrelegal_montodesde, encuadrelegal_montohasta } = req.body;
+
+    // Validación de campos requeridos
+    if (!encuadrelegal_det || !encuadrelegal_nombre || !tipocompra_id || encuadrelegal_montodesde == null || encuadrelegal_montohasta == null) {
+      return res.status(400).json({ message: "Todos los campos son requeridos", ok: false });
     }
 
     const sqlInsertEncuadre = `
-      INSERT INTO encuadrelegal (encuadrelegal_det)
-      VALUES (?)
+      INSERT INTO encuadrelegal (encuadrelegal_det, encuadrelegal_nombre, tipocompra_id, encuadrelegal_montodesde, encuadrelegal_montohasta)
+      VALUES (?, ?, ?, ?, ?)
     `;
 
-    const [result] = await connection.execute(sqlInsertEncuadre, [encuadrelegal_det.toUpperCase()]);
+    const [result] = await connection.execute(sqlInsertEncuadre, [
+      encuadrelegal_det.toUpperCase(),
+      encuadrelegal_nombre.toUpperCase(),
+      tipocompra_id,
+      encuadrelegal_montodesde,
+      encuadrelegal_montohasta
+    ]);
 
     if (result.affectedRows === 0) {
       return res.status(400).json({ message: "No se pudo agregar el encuadre legal", ok: false });
@@ -2725,24 +2755,33 @@ const agregarEncuadreLegal = async (req, res) => {
   }
 };
 
+
 const editarEncuadreLegal = async (req, res) => {
   let connection;
   try {
     connection = await conectar_BD_GAF_MySql(); // Conexión a la base de datos
 
-    const { encuadrelegal_id, encuadrelegal_det } = req.body;
+    const { encuadrelegal_id, encuadrelegal_det, encuadrelegal_nombre, tipocompra_id, encuadrelegal_montodesde, encuadrelegal_montohasta } = req.body;
 
-    if (!encuadrelegal_id || !encuadrelegal_det) {
+    // Validación de campos requeridos
+    if (!encuadrelegal_id || !encuadrelegal_det || !encuadrelegal_nombre || !tipocompra_id || encuadrelegal_montodesde == null || encuadrelegal_montohasta == null) {
       return res.status(400).json({ message: "Todos los campos son requeridos", ok: false });
     }
 
     const sqlUpdateEncuadre = `
       UPDATE encuadrelegal
-      SET encuadrelegal_det = ?
+      SET encuadrelegal_det = ?, encuadrelegal_nombre = ?, tipocompra_id = ?, encuadrelegal_montodesde = ?, encuadrelegal_montohasta = ?
       WHERE encuadrelegal_id = ?
     `;
 
-    const [result] = await connection.execute(sqlUpdateEncuadre, [encuadrelegal_det.toUpperCase(), encuadrelegal_id]);
+    const [result] = await connection.execute(sqlUpdateEncuadre, [
+      encuadrelegal_det.toUpperCase(),
+      encuadrelegal_nombre.toUpperCase(),
+      tipocompra_id,
+      encuadrelegal_montodesde,
+      encuadrelegal_montohasta,
+      encuadrelegal_id
+    ]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: "Encuadre legal no encontrado", ok: false });
@@ -2758,6 +2797,7 @@ const editarEncuadreLegal = async (req, res) => {
     }
   }
 };
+
 
 const eliminarEncuadreLegal = async (req, res) => {
   let connection;
