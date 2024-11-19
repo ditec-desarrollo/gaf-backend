@@ -119,7 +119,7 @@ const conectar_smt_Patrimonio_MySql = async () => {
             host: '172.16.8.214',
             user: 'usuario_desarrollo',
             port: '3306',
-            password: 'dev2024',
+            password: 'desa2024**',
             database: 'smt_patrimonio',
         });
         return connection
