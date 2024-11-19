@@ -80,7 +80,9 @@ const {
     eliminarEncuadreLegal,
     modificarMovimientoAltaDeCompromiso,
     obtenerTiposDeCompras,
-    obtenerDatosItem
+    obtenerDatosItem,
+    obtenerMovimientoReserva,
+    obtenerMovimientoCompromiso
   } = require("../controllers/gestionFinancieraControllers");
   
 
@@ -194,5 +196,8 @@ router.delete("/encuadrelegal/eliminar/:idEliminar", eliminarEncuadreLegal);
 router.get("/tipocompra/listar", obtenerTiposDeCompras)
 
 router.get("/obtenerDatosItem", obtenerDatosItem)
+
+router.get("/obtenerMovimientoReserva", obtenerMovimientoReserva)
+router.get("/obtenerMovimientoCompromiso", obtenerMovimientoCompromiso)
 
 module.exports = router;

@@ -1110,9 +1110,10 @@ const partidaExistente = async (req, res) => {
 
 const agregarMovimiento = async (req, res) => {
   let transaction;
+  let connection;
   try {
     const { movimiento, detMovimiento,expediente, presupuesto, items, encuadreLegal, tipoDeCompra } = req.body;
-console.log(items);
+    console.log(items);
 
     transaction = await sequelize.transaction();
 
@@ -1149,6 +1150,7 @@ console.log(items);
 
     // const movimientoId = result.insertId;
     const movimientoId = nuevoMovimiento.movimiento_id;
+    
 
     for (const detalle of detMovimiento) {
       await DetMovimiento.create(
@@ -1175,10 +1177,26 @@ console.log(items);
         { transaction }
       );
     }
-
+    
     await transaction.commit();
 
-    res.status(200).json({ message: "Movimiento creado con éxito" });
+    if(movimiento.tipomovimiento_id == 1){
+      connection = await conectar_BD_GAF_MySql();
+  
+      const [result] = await connection.execute(
+        'CALL sp_docreserva(?)',
+        [movimientoId]
+      );
+    }else if(movimiento.tipomovimiento_id == 4){
+      connection = await conectar_BD_GAF_MySql();
+  
+      const [result] = await connection.execute(
+        'CALL sp_doccompromiso(?)',
+        [movimientoId]
+      );
+    }
+
+    res.status(200).json({ message: "Movimiento creado con éxito", idMovi: movimientoId });
   } catch (error) {
  
     if(error.name == "SequelizeUniqueConstraintError"){
@@ -1186,6 +1204,11 @@ console.log(items);
     }else{
 
       res.status(500).json({ message: error.message || "Algo salió mal :(" });
+    }
+  }finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
     }
   }
 };
@@ -1370,6 +1393,49 @@ const obtenerPresupuestosParaMovimientoPresupuestario = async (req, res) => {
   }
 }
 
+const obtenerMovimientoReserva = async (req, res) => {
+  let connection;
+  const idMovi = req.query.idMovi;
+  try {
+
+    connection = await conectar_BD_GAF_MySql();
+
+    let sqlQuery = "SELECT CONCAT(partida_codigo, '_', partida_det) AS Partidas, imputacion_credito AS `Crédito Autorizado`, imputacion_reserva AS `Monto Reserva Interna`, imputacion_compromiso AS Compromiso, imputacion_saldo AS `Saldo Presupuestario`, imputacion_nuevareserva AS `Nueva Reserva`, imputacion_nuevomontoreservado AS `Nuevo Monto Reservado` FROM movimiento_reserva WHERE movimiento_id = ? ORDER BY partida_codigo";
+    const [tablaPorPartidas] = await connection.execute(sqlQuery,[idMovi]);
+
+    res.status(200).json({ tablaPorPartidas });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
+
+const obtenerMovimientoCompromiso = async (req, res) => {
+  let connection;
+  const idMovi = req.query.idMovi;
+  try {
+
+    connection = await conectar_BD_GAF_MySql();
+
+    let sqlQuery = "SELECT CONCAT(partida_codigo, '_', partida_det) AS Partidas, imputacion_credito AS `Crédito Autorizado`, imputacion_saldo AS `Saldo Presupuestario`, imputacion_compromiso AS Compromiso, imputacion_nuevosaldo AS `Nuevo Saldo Presupuestario` FROM movimiento_compromiso WHERE movimiento_id = ? ORDER BY partida_codigo";
+    const [tablaPorPartidas] = await connection.execute(sqlQuery,[idMovi]);
+
+    res.status(200).json({ tablaPorPartidas });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
 
 const modificarMovimiento = async (req, res) => {
   const {  movimiento, detMovimiento, proveedor, items, encuadreLegal,expediente,tipoDeInstrumento, tipoDeCompra } = req.body;
@@ -1408,7 +1474,7 @@ const modificarMovimiento = async (req, res) => {
     }
 
       await connection.commit();
-      res.status(200).json({ message: 'Movimiento actualizado correctamente' });
+      res.status(200).json({ message: 'Movimiento actualizado correctamente', idMovi: movimiento.id });
   } catch (error) {
     console.log(error);
       await connection.rollback();
@@ -2882,7 +2948,8 @@ module.exports = {
   buscarExpedienteParaModificarPorTransferenciaEntrePartidas,
   obtenerNomencladores,
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
- obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem
+ obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem,
+ obtenerMovimientoReserva, obtenerMovimientoCompromiso
 };
 
 
