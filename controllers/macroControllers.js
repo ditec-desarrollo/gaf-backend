@@ -18,7 +18,7 @@ const QRCode = require("qrcode");
 const { conectarBaseDeDatosSanidad } = require("../config/dbSQLSanidad");
 const { sequelize_ciu_digital_derivador } = require("../config/sequelize");
 const moment = require("moment-timezone");
-// const nodemailer = require("nodemailer");
+const nodemailer = require("nodemailer");
 
 const obtenerCategorias = async (req, res) => {
   const connection = await conectarMySql();
@@ -43,27 +43,6 @@ const obtenerCategorias = async (req, res) => {
     if (connection) {
       await connection.end();
     }
-  }
-};
-
-const funcionPrueba = async (req, res) => {
-  try {
-    const telefono = req.query.telefono;
-    const cuil = req.query.cuil;
-    const connection = await conectarBDEstadisticasMySql();
-    console.log(cuil, "cuil");
-    const [results, fields] = await connection.execute(
-      ` SELECT * FROM persona WHERE documento_persona = ? AND telefono_persona = ?`,
-      [cuil, telefono]
-    );
-    res.status(200).json({ results });
-
-    console.log(results, "results");
-    await connection.end();
-    console.log("conexión cerrada");
-  } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: "Error de servidor" });
   }
 };
 
@@ -924,7 +903,7 @@ const agregarUsuario = async (req, res) => {
       nombre_persona,
       apellido_persona,
       email_persona,
-      password,
+      clave,
       telefono_persona,
       domicilio_persona,
       //id_provincia,
@@ -938,10 +917,19 @@ const agregarUsuario = async (req, res) => {
 
     console.log(req.body);
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(clave, 10);
 
     const fechaStr = fecha_nacimiento_persona;
-    const fechaFormateada = moment(fechaStr).format("YYYY-MM-DD");
+    if (!fechaStr) {
+      throw new Error("La fecha de nacimiento es requerida");
+    }
+    const fechaFormateada = moment(fechaStr, "YYYY-MM-DD", true).isValid()
+      ? moment(fechaStr).format("YYYY-MM-DD")
+      : null;
+
+    if (!fechaFormateada) {
+      throw new Error("Formato de fecha no válido. Usa 'YYYY-MM-DD'.");
+    }
 
     // const codigoValidacion = generarCodigo(documento_persona);
 
@@ -1063,6 +1051,403 @@ const agregarUsuario = async (req, res) => {
   }
 };
 
+const generarCodigo = (numero) => {
+  const numeroInvertido = parseInt(
+    numero?.toString().split("").reverse().join("")
+  );
+  const ultimosCuatroDigitos = numeroInvertido % 10000;
+  return ultimosCuatroDigitos;
+};
+
+const transporter = nodemailer.createTransport({
+  // host: 'smtp.gmail.com',
+  service: "gmail",
+  // port: 465,
+  // secure: true,
+  auth: {
+    user: "no-reply-cdigital@smt.gob.ar",
+    pass: process.env.PASSWORD_MAIL,
+  },
+});
+
+const enviarEmail = (codigo, email, cuil) => {
+  try {
+    const mailOptions = {
+      from: "SMT-Ciudadano Digital <no-reply-cdigital@smt.gob.ar>",
+      to: email,
+      subject: "Código de validación",
+      // text: `Tu código de validación es: ${codigo}. Para visualizar su credencial de Ciudadano Digital ingrese al siguiente link: https://ciudaddigital.smt.gob.ar/#/credencialesCiudadano/${cuil}`,
+      //link https://ciudaddigital.smt.gob.ar/#/validarPorLink/${email}/${codigo}
+      html: `<p>Tu código de validación es: <strong style="font-size: 24px;">${codigo}</strong></p> <br/> 
+      También puede validar su usuario ingresando al siguiente link https://ciudaddigital.smt.gob.ar/#/validacionPorLink/${email}/${codigo}`,
+    };
+
+    transporter.sendMail(mailOptions, (errorEmail, info) => {
+      if (errorEmail) {
+        console.log("error al enviar correo");
+        // return res.status(500).json({ mge: 'Error al enviar el correo electrónico:', ok: false, error: errorEmail });
+      } else {
+        // return res.status(200).json({mge:'Correo electrónico enviado correctamente:',ok: true});
+        console.log("email enviado");
+      }
+    });
+  } catch (error) {
+    console.log("error al enviar email");
+  }
+};
+
+const registroUsuario = async (req, res) => {
+  let connection;
+  try {
+    const {
+      cuil,
+      nombre_persona,
+      apellido_persona,
+      email_persona,
+      clave,
+      telefono_persona,
+      domicilio_persona,
+      //id_provincia,
+      localidad_persona,
+      //id_pais,
+      fecha_nacimiento_persona,
+      id_genero,
+      //validado,
+      //habilita,
+    } = req.body;
+
+    const hashedPassword = await bcrypt.hash(clave, 10);
+
+    const fechaStr = fecha_nacimiento_persona;
+    if (!fechaStr) {
+      throw new Error("La fecha de nacimiento es requerida");
+    }
+    const fechaFormateada = moment(fechaStr, "YYYY-MM-DD", true).isValid()
+      ? moment(fechaStr).format("YYYY-MM-DD")
+      : null;
+
+    if (!fechaFormateada) {
+      throw new Error("Formato de fecha no válido. Usa 'YYYY-MM-DD'.");
+    }
+
+    const codigoValidacion = generarCodigo(cuil);
+
+    connection = await conectarBDEstadisticasMySql();
+
+    // Consultar si ya existe un usuario con el mismo email o documento
+    const [resultEmail] = await connection.query(
+      "SELECT * FROM persona WHERE email_persona = ?",
+      [email_persona]
+    );
+    if (resultEmail.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "Email ya registrado", userEmail: email_persona });
+    }
+
+    const [resultDocumento] = await connection.query(
+      "SELECT * FROM persona WHERE documento_persona = ?",
+      [cuil]
+    );
+    if (resultDocumento.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "DNI ya registrado", userDNI: cuil });
+    }
+
+    const empleadoValidado = await validarEmpleado(cuil);
+
+    if (empleadoValidado && empleadoValidado?.legajo[0] !== null) {
+      // Se encontró un legajo
+      // Iniciar una transacción
+      const transaction = await sequelize_ciu_digital_derivador.transaction();
+
+      const [resultReparticion] = await connection.query(
+        "SELECT * FROM reparticion WHERE reparticion.habilita = 1 AND reparticion.item = ?",
+        [empleadoValidado.legajo[0].codi_17]
+      );
+
+      let id_rep = resultReparticion[0]?.id_reparticion;
+      let usuarioEmpleado = 4;
+      // Insertar el nuevo usuario con legajo
+      const nuevaPersona = await Persona.create(
+        {
+          cuil,
+          nombre_persona: nombre_persona.toUpperCase(),
+          apellido_persona: apellido_persona.toUpperCase(),
+          email_persona,
+          password: hashedPassword,
+          telefono_persona,
+          domicilio_persona: domicilio_persona?.toUpperCase(),
+          id_provincia: 1,
+          id_pais: 1,
+          localidad_persona: localidad_persona?.toUpperCase(),
+          fecha_nacimiento_persona: fechaFormateada,
+          id_genero,
+          id_tdocumento: 1,
+          id_tusuario: usuarioEmpleado,
+        },
+        { transaction }
+      );
+      const [resultPersona] = await connection.query(
+        "SELECT * FROM persona p WHERE p.documento_persona = ?",
+        [cuil]
+      );
+      let id_per = resultPersona[0].id_persona;
+      let afil = empleadoValidado.legajo[0].lega_12;
+      const nuevoEmpleado = await Empleado.create(
+        {
+          id_persona: id_per,
+          afiliado: afil,
+          id_reparticion: id_rep ? id_rep : 1,
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
+    } else {
+      // No se encontró un legajo
+      console.log("No se encontró un legajo");
+      // Insertar el nuevo usuario
+      const [resultInsert] = await connection.query(
+        "INSERT INTO persona (documento_persona, nombre_persona, apellido_persona, email_persona, clave, telefono_persona, domicilio_persona, id_provincia, id_pais, localidad_persona, validado, habilita, fecha_nacimiento_persona, id_genero) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,  ?, ?, ?)",
+        [
+          cuil,
+          nombre_persona.toUpperCase(),
+          apellido_persona.toUpperCase(),
+          email_persona,
+          hashedPassword,
+          telefono_persona,
+          "", //domicilio_persona?.toUpperCase(),
+          1, //id_provincia,
+          1, //id_pais,
+          "", //localidad_persona?.toUpperCase(),
+          0, //validado
+          1, //habilita
+          fechaFormateada,
+          id_genero,
+        ]
+      );
+    }
+    // Enviar correo electrónico al usuario recién registrado
+    enviarEmail(codigoValidacion, email_persona, cuil);
+
+    await connection.end();
+    res.status(200).json({ message: "Ciudadano creado con éxito", ok: true });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
+
+const validarUsuario = async (req, res) => {
+  let connection;
+  try {
+    const { email_persona, codigo_verif } = req.body;
+
+    // Establecer la conexión a la base de datos MySQL
+    connection = await conectarBDEstadisticasMySql();
+
+    // Consultar el usuario por su email
+    const [result] = await connection.query(
+      "SELECT * FROM persona WHERE email_persona = ?",
+      [email_persona]
+    );
+    console.log(result);
+    // Verificar si se encontró el usuario
+    if (result.length > 0) {
+      const usuario = result[0];
+      const codigo = generarCodigo(usuario.documento_persona);
+
+      // Verificar si el usuario ya está validado
+      if (!usuario.validado) {
+        // Verificar si el código de verificación coincide
+        if (codigo === codigo_verif) {
+          // Actualizar el estado de validación del usuario
+          await connection.query(
+            "UPDATE persona SET validado = 1, habilita = 1 WHERE email_persona = ?",
+            [email_persona]
+          );
+          await connection.end();
+          return res
+            .status(200)
+            .json({ message: "Usuario validado con éxito", ok: true });
+        } else {
+          await connection.end();
+          return res.status(200).json({
+            message: "El código de verificación es incorrecto",
+            ok: false,
+          });
+        }
+      } else {
+        await connection.end();
+        return res
+          .status(200)
+          .json({ message: "El usuario ya está validado", ok: false });
+      }
+    } else {
+      await connection.end();
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
+
+function generarCodigoAfaNumerico() {
+  const caracteres =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let codigo = "";
+
+  for (let i = 0; i < 8; i++) {
+    const indice = Math.floor(Math.random() * caracteres.length);
+    codigo += caracteres.charAt(indice);
+  }
+
+  return codigo;
+}
+
+const restablecerClave = async (req, res) => {
+  let connection;
+  try {
+    const { email } = req.body;
+
+    const clave_nueva = generarCodigoAfaNumerico();
+
+    // Establecer la conexión a la base de datos MySQL
+    connection = await conectarBDEstadisticasMySql();
+
+    // Consultar el usuario por su email
+    const [result] = await connection.query(
+      "SELECT * FROM persona WHERE email_persona = ?",
+      [email]
+    );
+
+    // Verificar si se encontró el usuario
+    if (result.length > 0) {
+      if (result[0].validado == 0) {
+        await connection.end();
+        return res.status(200).json({
+          message:
+            "¡Usuario no validado! El usuario debe estar validado para poder restablecer su clave",
+          ok: false,
+        });
+      }
+      const hashedPassword = await bcrypt.hash(clave_nueva, 10);
+
+      await connection.query(
+        "UPDATE persona SET clave = ? WHERE email_persona = ?",
+        [hashedPassword, email]
+      );
+      await connection.end();
+      const mailOptions = {
+        from: "SMT-Ciudadano Digital <no-reply-cdigital@smt.gob.ar>", // Coloca tu dirección de correo electrónico
+        to: email, // Utiliza el correo electrónico del usuario recién registrado
+        subject: "Restablecer Clave",
+        text: `Tu nueva clave temporal es: ${clave_nueva}. Recuerda cambiarla después de iniciar sesión`,
+      };
+
+      transporter.sendMail(mailOptions, (errorEmail, info) => {
+        if (errorEmail) {
+          return res.status(500).json({
+            msg: "Error al enviar el correo electrónico:",
+            error: errorEmail,
+          });
+        } else {
+          return res.status(200).json({
+            message: `Se envió un email a ${email} con una clave temporal`,
+            ok: true,
+          });
+        }
+      });
+    } else {
+      // No se encontró el usuario
+      return res.status(200).json({
+        message: "El email ingresado no corresponde a un usuario registrado",
+        ok: false,
+      });
+    }
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: error.message || "Algo salió mal :(" });
+  }
+};
+
+
+const editarClave = async (req, res) => {
+  let connection;
+  try {
+    const { cuil, clave_actual, clave_nueva } = req.body;
+
+    // Establecer la conexión a la base de datos MySQL
+    connection = await conectarBDEstadisticasMySql();
+
+    // Consultar el usuario por su email
+    const [result] = await connection.query(
+      "SELECT * FROM persona WHERE documento_persona = ?",
+      [cuil]
+    );
+
+    // Verificar si se encontró el usuario
+    if (result.length > 0) {
+      const usuario = result[0];
+      //console.log(usuario)
+      const passOk = await bcrypt.compare(clave_actual, usuario.clave);
+      if (!passOk) {
+        await connection.end();
+        return res
+          .status(200)
+          .json({ message: "La clave actual es incorrecta", ok: false });
+      }
+
+      // Verificar si el usuario ya está validado
+      if (usuario.validado) {
+        const hashedPassword = await bcrypt.hash(clave_nueva, 10);
+
+        // Actualizar el estado de validación del usuario
+        await connection.query(
+          "UPDATE persona SET clave = ? WHERE documento_persona = ?",
+          [hashedPassword, cuil]
+        );
+        await connection.end();
+        return res
+          .status(200)
+          .json({ message: "Clave modificada con éxito", ok: true });
+      } else {
+        // El usuario ya está validado
+        await connection.end();
+        return res
+          .status(200)
+          .json({ message: "¡Usuario no validado! El usuario debe estar validado para poder cambiar su clave", ok: false });
+      }
+    } else {
+      // No se encontró el usuario
+      await connection.end();
+      return res
+        .status(200)
+        .json({ message: "Usuario no encontrado", ok: false });
+    }
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: error.message || "Algo salió mal :(" });
+  }
+};
+
+
 module.exports = {
   obtenerCategorias,
   obtenerTiposDeReclamoPorCategoria,
@@ -1082,4 +1467,8 @@ module.exports = {
   credencial,
   obtenerDatosCarnetSanidad,
   agregarUsuario,
+  registroUsuario,
+  validarUsuario,
+  restablecerClave,
+  editarClave
 };
