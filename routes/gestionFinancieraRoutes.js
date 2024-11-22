@@ -2,7 +2,8 @@ const { Router } = require("express");
 const auth = require("../middlewares/auth");
 const verifyRole = require("../middlewares/verifyRole");
 
-
+const multer = require('multer');
+const path = require('path');
 
 const { 
     listarAnexos, 
@@ -82,7 +83,8 @@ const {
     obtenerTiposDeCompras,
     obtenerDatosItem,
     obtenerMovimientoReserva,
-    obtenerMovimientoCompromiso
+    obtenerMovimientoCompromiso,
+    registroCompromisoAlta
   } = require("../controllers/gestionFinancieraControllers");
   
 
@@ -144,7 +146,49 @@ router.post("/movimiento/alta",agregarMovimiento)
 router.post("/movimiento/altaDefinitivaPreventiva",agregarMovimientoDefinitivaPreventiva)
 router.post("/movimiento/altaPorTransferenciaEntrePartidas",agregarMovimientoPorTransferenciaDePartidas)
 router.patch("/movimiento/editarPorTransferenciaEntrePartidas",modificarMovimientoParaTransferenciaEntrePartidas)
+
 router.patch("/movimiento/editarAltaDeCompromiso",modificarMovimientoAltaDeCompromiso)
+
+
+// Configurar el almacenamiento de los archivos
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, './uploads/'); // Directorio donde se almacenarán los archivos
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); // Nombrar los archivos con un timestamp
+  },
+});
+
+// Inicializar multer
+const upload = multer({ storage: storage });
+
+// router.post('/registroCompromiso/alta', upload.fields([
+//   { name: 'archivoActa', maxCount: 1 },  // Permite hasta 5 archivos para 'archivoActa'
+//   { name: 'archivoProtocolo', maxCount: 1 },   // Permite hasta 3 archivos para otro campo
+// ]), (req, res) => {
+//   try {
+//     // Aquí puedes acceder a los archivos en req.files
+//     console.log(req.files); // Ver los archivos subidos
+
+//     // Si también recibes un JSON en el cuerpo (requestData)
+//     const obj = JSON.parse(req.body.requestData); // Parsear el JSON
+//     console.log(obj); // Objeto que recibes del frontend
+
+//     // Realiza las operaciones necesarias con los archivos y datos
+
+//     res.status(200).json({ message: 'Archivos y datos recibidos correctamente' });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'Hubo un error al procesar los archivos' });
+//   }
+// });
+
+router.post('/registroCompromiso/alta', upload.fields([
+  { name: 'archivoActa', maxCount: 1 },
+  { name: 'archivoProtocolo', maxCount: 1 },
+]), registroCompromisoAlta); // Llamar al controlador después del middleware de multer
+
 router.patch("/movimiento/editar",modificarMovimiento)
 router.get("/movimiento/tipoInstrumento", obtenerTiposDeInstrumentos)
 

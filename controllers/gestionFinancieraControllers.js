@@ -6,6 +6,10 @@ const Expediente = require("../models/Financiera/Expediente");
 const { obtenerFechaEnFormatoDate } = require("../utils/helpers");
 const DetMovimientoNomenclador = require("../models/Financiera/DetMovimientoNomenclador");
 const { obtenerFechaDelServidor } = require("../utils/obtenerInfoDelServidor");
+const { funcionMulterGAF } = require("../middlewares/multerArchivosGAF");
+const fs = require('fs');
+const path = require('path');
+
 
 const listarAnexos = async (req, res) => {
   let connection;
@@ -1187,14 +1191,15 @@ const agregarMovimiento = async (req, res) => {
         'CALL sp_docreserva(?)',
         [movimientoId]
       );
-    }else if(movimiento.tipomovimiento_id == 4){
-      connection = await conectar_BD_GAF_MySql();
-  
-      const [result] = await connection.execute(
-        'CALL sp_doccompromiso(?)',
-        [movimientoId]
-      );
     }
+    // else if(movimiento.tipomovimiento_id == 4){
+    //   connection = await conectar_BD_GAF_MySql();
+  
+    //   const [result] = await connection.execute(
+    //     'CALL sp_doccompromiso(?)',
+    //     [movimientoId]
+    //   );
+    // }
 
     res.status(200).json({ message: "Movimiento creado con éxito", idMovi: movimientoId });
   } catch (error) {
@@ -1215,6 +1220,7 @@ const agregarMovimiento = async (req, res) => {
 
 const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
   let transaction;
+  let connection;
   try {
     const { movimiento, detMovimiento,expediente, presupuesto , proveedor, items, encuadreLegal, tipoDeCompra} = req.body;
 
@@ -1268,9 +1274,23 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
 
     await transaction.commit();
 
-    res.status(200).json({ message: "Movimiento creado con éxito" });
+    if(movimiento.tipomovimiento_id == 4){
+      connection = await conectar_BD_GAF_MySql();
+  
+      const [result] = await connection.execute(
+        'CALL sp_doccompromiso(?)',
+        [movimientoId]
+      );
+    }
+
+    res.status(200).json({ message: "Movimiento creado con éxito", idMovi: movimientoId });
   } catch (error) {
     res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  }finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
   }
 };
 
@@ -1493,7 +1513,7 @@ const modificarMovimientoAltaDeCompromiso= async (req, res) => {
   let connection;
   try {
     connection = await conectar_BD_GAF_MySql();
-    await connection.query("UPDATE movimiento SET tipoinstrumento_id = ?, instrumento_nro = ? WHERE movimiento_id = ?",[tipoDeInstrumento,expediente.numeroInstrumento,movimiento.id])
+    await connection.query("UPDATE movimiento SET tipoinstrumento_id = ?, instrumento_nro = ?, movimiento_protocolo = ?, movimiento_actadm = ?,  movimiento_factura = ? WHERE movimiento_id = ?",[tipoDeInstrumento,expediente.numeroInstrumento,movimiento.id, movimiento.movimiento_protocolo, movimiento.movimiento_actadm, movimiento.movimiento_factura ])
     res.status(200).json({ message: 'Movimiento actualizado correctamente' });
   } catch (error) {
       console.log(error);
@@ -1505,6 +1525,68 @@ const modificarMovimientoAltaDeCompromiso= async (req, res) => {
     }
   }
 }
+
+
+const moverArchivos = (file, destino) => {
+  return new Promise((resolve, reject) => {
+    const archivoOrigen = file.path;  // Ruta del archivo original en 'uploads'
+    const archivoDestino = path.join(destino, file.filename);  // Ruta de destino completa
+
+    fs.rename(archivoOrigen, archivoDestino, (err) => {
+      if (err) {
+        reject(err);  // Si hay un error, lo rechazamos
+      } else {
+        resolve(archivoDestino);  // Si el archivo se movió con éxito
+      }
+    });
+  });
+};
+
+// !VINCULAR CON EL CONTROLADOR modificarMovimientoAltaDeCompromiso
+const registroCompromisoAlta = async (req, res) => {
+  try {
+    // Ver los archivos subidos
+    let obj;
+    try {
+      const requestDataString = req.body.requestData; // Accede al string JSON
+      obj = JSON.parse(requestDataString); // Intenta convertir el string en un objeto
+      console.log(obj); // Imprime el objeto
+    } catch (error) {
+      console.error('Error al parsear el JSON:', error);
+      // Maneja el error, por ejemplo, enviando una respuesta de error al cliente
+      res.status(400).json({ message: 'Error al procesar los datos' });
+    }
+
+    // Carpeta de destino
+    const destino = 'C:/Users/usuario/Downloads';  // Ruta de destino
+
+    // Asegúrate de que la carpeta destino exista, si no, crea una
+    if (!fs.existsSync(destino)) {
+      fs.mkdirSync(destino, { recursive: true });  // Crea la carpeta si no existe
+    }
+
+    // Mover cada archivo subido a la carpeta de destino
+    const archivosMovidos = await Promise.all(
+      Object.values(req.files).map(async (archivos) => {
+        // Mover cada archivo
+        return await Promise.all(
+          archivos.map(async (archivo) => {
+            const archivoDestino = await moverArchivos(archivo, destino);
+            console.log(`Archivo movido: ${archivoDestino}`);
+            return archivoDestino;
+          })
+        );
+      })
+    );
+
+    // Si todo fue bien, respondemos con un mensaje de éxito
+    res.status(200).json({ message: 'Archivos movidos correctamente', archivos: archivosMovidos });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Hubo un error al mover los archivos' });
+  }
+};
 
 const buscarExpediente = async (req, res) => {
   let connection;
@@ -2949,7 +3031,7 @@ module.exports = {
   obtenerNomencladores,
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
  obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem,
- obtenerMovimientoReserva, obtenerMovimientoCompromiso
+ obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta
 };
 
 
