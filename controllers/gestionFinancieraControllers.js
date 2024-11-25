@@ -1507,22 +1507,15 @@ const modificarMovimiento = async (req, res) => {
   }
 };
 
-const modificarMovimientoAltaDeCompromiso= async (req, res) => {
-  const { expediente, tipoDeInstrumento, movimiento} = req.body;
+const modificarMovimientoAltaDeCompromiso= async (expediente, tipoDeInstrumento, movimiento, connection) => {
 
-  let connection;
   try {
-    connection = await conectar_BD_GAF_MySql();
-    await connection.query("UPDATE movimiento SET tipoinstrumento_id = ?, instrumento_nro = ?, movimiento_protocolo = ?, movimiento_actadm = ?,  movimiento_factura = ? WHERE movimiento_id = ?",[tipoDeInstrumento,expediente.numeroInstrumento,movimiento.id, movimiento.movimiento_protocolo, movimiento.movimiento_actadm, movimiento.movimiento_factura ])
-    res.status(200).json({ message: 'Movimiento actualizado correctamente' });
+   
+    await connection.query("UPDATE movimiento SET tipoinstrumento_id = ?, instrumento_nro = ?, movimiento_protocolo = ?, movimiento_actadm = ?,  movimiento_factura = ? WHERE movimiento_id = ?",[tipoDeInstrumento,expediente.numeroInstrumento, expediente.numeroProtocolo, expediente.numeroActa, expediente.numeroFactura, movimiento.id])
+  
   } catch (error) {
       console.log(error);
-      res.status(500).json({ message: 'Error al actualizar el instrumento del movimiento', error });
-  } finally {
-    // Cerrar la conexión a la base de datos
-    if (connection) {
-      await connection.end();
-    }
+      throw new Error('Error al actualizar el movimiento: ' + error.message);
   }
 }
 
@@ -1530,7 +1523,10 @@ const modificarMovimientoAltaDeCompromiso= async (req, res) => {
 const moverArchivos = (file, destino) => {
   return new Promise((resolve, reject) => {
     const archivoOrigen = file.path;  // Ruta del archivo original en 'uploads'
-    const archivoDestino = path.join(destino, file.filename);  // Ruta de destino completa
+    console.log(file);
+    const extension = path.extname(file.originalname);
+
+    const archivoDestino = path.join(destino, `${file.fieldname}${extension}`);  // Ruta de destino completa
 
     fs.rename(archivoOrigen, archivoDestino, (err) => {
       if (err) {
@@ -1542,8 +1538,10 @@ const moverArchivos = (file, destino) => {
   });
 };
 
-// !VINCULAR CON EL CONTROLADOR modificarMovimientoAltaDeCompromiso
+
 const registroCompromisoAlta = async (req, res) => {
+  let connection;
+  const { expediente, tipoDeInstrumento, movimiento } = req.body;
   try {
     // Ver los archivos subidos
     let obj;
@@ -1554,11 +1552,13 @@ const registroCompromisoAlta = async (req, res) => {
     } catch (error) {
       console.error('Error al parsear el JSON:', error);
       // Maneja el error, por ejemplo, enviando una respuesta de error al cliente
-      res.status(400).json({ message: 'Error al procesar los datos' });
+      return res.status(400).json({ message: 'Error al procesar los datos' });
     }
 
+    connection = await conectar_BD_GAF_MySql();
+
     // Carpeta de destino
-    const destino = 'C:/Users/usuario/Downloads';  // Ruta de destino
+    const destino = `C:/Users/usuario/Downloads/movimientos/${obj.movimiento.id}/${obj.movimiento.tipomovimiento_id}`;  // Ruta de destino
 
     // Asegúrate de que la carpeta destino exista, si no, crea una
     if (!fs.existsSync(destino)) {
@@ -1579,14 +1579,43 @@ const registroCompromisoAlta = async (req, res) => {
       })
     );
 
+    await modificarMovimientoAltaDeCompromiso(obj.expediente, obj.tipoDeInstrumento, obj.movimiento, connection);
+
     // Si todo fue bien, respondemos con un mensaje de éxito
-    res.status(200).json({ message: 'Archivos movidos correctamente', archivos: archivosMovidos });
+    res.status(200).json({ message: 'Movimiento actualizado correctamente', archivos: archivosMovidos });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Hubo un error al mover los archivos' });
+    res.status(500).json({ message: 'Hubo un error en el proceso', error: error.message });
+  }finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
   }
 };
+
+
+const obtenerArchivo = async (req, res) => {
+  try {
+    const { nombreArchivo } = req.params; // Nombre del archivo desde los parámetros de la URL
+    const ruta = decodeURIComponent(req.query.ruta); // Decodifica el parámetro
+    console.log(`Ruta recibida: ${ruta}`);
+    const rutaArchivo = path.join('C:/Users/usuario/Downloads/movimientos', ruta); // Ruta completa del archivo
+
+    // Verificar si el archivo existe
+    if (!fs.existsSync(rutaArchivo)) {
+      return res.status(404).json({ message: 'Archivo no encontrado' });
+    }
+
+    // Enviar el archivo como respuesta
+    res.sendFile(rutaArchivo);
+  } catch (error) {
+    console.error('Error al obtener el archivo:', error);
+    res.status(500).json({ message: 'Error al obtener el archivo', error: error.message });
+  }
+};
+
 
 const buscarExpediente = async (req, res) => {
   let connection;
@@ -1598,7 +1627,7 @@ const buscarExpediente = async (req, res) => {
 
     // Primera consulta: Obtener los detalles del expediente
     const query1 = `
-    SELECT e.*, m.presupuesto_id,m.movimiento_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,m.encuadrelegal_id, prov.*, d.detmovimiento_id,d.detpresupuesto_id,d.detmovimiento_importe, dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones, i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id
+    SELECT e.*, m.presupuesto_id,m.movimiento_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,m.encuadrelegal_id,m.movimiento_protocolo, m.movimiento_actadm, m.movimiento_factura, prov.*, d.detmovimiento_id,d.detpresupuesto_id,d.detmovimiento_importe, dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones, i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id
     FROM expediente AS e
     LEFT JOIN movimiento AS m ON e.expediente_id = m.expediente_id
     LEFT JOIN encuadrelegal AS el ON m.encuadrelegal_id = el.encuadrelegal_id 
@@ -3031,7 +3060,7 @@ module.exports = {
   obtenerNomencladores,
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
  obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem,
- obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta
+ obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo
 };
 
 

@@ -84,7 +84,8 @@ const {
     obtenerDatosItem,
     obtenerMovimientoReserva,
     obtenerMovimientoCompromiso,
-    registroCompromisoAlta
+    registroCompromisoAlta,
+    obtenerArchivo
   } = require("../controllers/gestionFinancieraControllers");
   
 
@@ -163,31 +164,15 @@ const storage = multer.diskStorage({
 // Inicializar multer
 const upload = multer({ storage: storage });
 
-// router.post('/registroCompromiso/alta', upload.fields([
-//   { name: 'archivoActa', maxCount: 1 },  // Permite hasta 5 archivos para 'archivoActa'
-//   { name: 'archivoProtocolo', maxCount: 1 },   // Permite hasta 3 archivos para otro campo
-// ]), (req, res) => {
-//   try {
-//     // Aquí puedes acceder a los archivos en req.files
-//     console.log(req.files); // Ver los archivos subidos
-
-//     // Si también recibes un JSON en el cuerpo (requestData)
-//     const obj = JSON.parse(req.body.requestData); // Parsear el JSON
-//     console.log(obj); // Objeto que recibes del frontend
-
-//     // Realiza las operaciones necesarias con los archivos y datos
-
-//     res.status(200).json({ message: 'Archivos y datos recibidos correctamente' });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: 'Hubo un error al procesar los archivos' });
-//   }
-// });
-
 router.post('/registroCompromiso/alta', upload.fields([
   { name: 'archivoActa', maxCount: 1 },
   { name: 'archivoProtocolo', maxCount: 1 },
+  { name: 'archivoFactura', maxCount: 1 },
 ]), registroCompromisoAlta); // Llamar al controlador después del middleware de multer
+
+// router.get('/archivo/:nombreArchivo', obtenerArchivo);
+router.get('/archivo', obtenerArchivo);
+
 
 router.patch("/movimiento/editar",modificarMovimiento)
 router.get("/movimiento/tipoInstrumento", obtenerTiposDeInstrumentos)
