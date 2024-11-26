@@ -1222,7 +1222,7 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
   let transaction;
   let connection;
   try {
-    const { movimiento, detMovimiento,expediente, presupuesto , proveedor, items, encuadreLegal, tipoDeCompra} = req.body;
+    const { movimiento, detMovimiento,expediente, presupuesto , proveedor, items, encuadreLegal, tipoDeCompra, item_id, libramiento_anio} = req.body;
 
     transaction = await sequelize.transaction();
 
@@ -1281,6 +1281,31 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
         'CALL sp_doccompromiso(?)',
         [movimientoId]
       );
+    }
+
+    if(movimiento.tipomovimiento_id == 5){
+      connection = await conectar_BD_GAF_MySql();
+  
+      const [result] = await connection.execute(
+        'SELECT sp_nrolibramiento(?)',
+        [libramiento_anio]
+      );
+
+      const nrolib = result[0]['sp_nrolibramiento(?)'];
+
+      const [result2] = await connection.execute(
+        'SELECT sp_nrolibramientoint(?,?)',
+        [libramiento_anio,item_id]
+      );
+
+      const nrolibint = result2[0]['sp_nrolibramientoint(?,?)'];
+
+      const [result3] = await connection.execute(
+        "INSERT INTO libramiento (libramiento_numero,libramiento_numeroint,libramiento_anio, libramiento_fecha, movimiento_id, proveedor_id, expediente_id, item_id, libramiento_importe, libramiento_concepto, libramiento_factura, libramiento_observaciones) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        [nrolib, nrolibint, libramiento_anio, movimiento.fecha, movimientoId, proveedor.id, expediente.id, item_id, libramiento_importe, libramiento_concepto, libramiento_factura, libramiento_observaciones]
+        // TERMINAR
+      );
+
     }
 
     res.status(200).json({ message: "Movimiento creado con éxito", idMovi: movimientoId });
@@ -1596,20 +1621,79 @@ const registroCompromisoAlta = async (req, res) => {
 };
 
 
+// const obtenerArchivo = async (req, res) => {
+//   try {
+//     const { nombreArchivo } = req.params; // Nombre del archivo desde los parámetros de la URL
+    
+//     const ruta = decodeURIComponent(req.query.ruta); // Decodifica el parámetro
+//     console.log(`Ruta recibida: ${ruta}`);
+//     const rutaArchivo = path.join('C:/Users/usuario/Downloads/movimientos', ruta); // Ruta completa del archivo
+
+//     // Verificar si el archivo existe
+//     if (!fs.existsSync(rutaArchivo)) {
+//       return res.status(404).json({ message: 'Archivo no encontrado' });
+//     }
+
+//     // Enviar el archivo como respuesta
+//     res.sendFile(rutaArchivo);
+//   } catch (error) {
+//     console.error('Error al obtener el archivo:', error);
+//     res.status(500).json({ message: 'Error al obtener el archivo', error: error.message });
+//   }
+// };
+
+const buscarArchivoPorNombre = (directorio, nombreArchivo) => {
+  return new Promise((resolve, reject) => {
+    fs.readdir(directorio, (err, archivos) => {
+      if (err) {
+        return reject(err);
+      }
+
+      // Buscar archivo que coincida con el nombre proporcionado
+      const archivoEncontrado = archivos.find((archivo) => path.parse(archivo).name === nombreArchivo);
+
+      if (!archivoEncontrado) {
+        return reject(new Error(`Archivo con nombre "${nombreArchivo}" no encontrado en el directorio.`));
+      }
+
+      // Devolver la extensión del archivo encontrado
+      resolve(archivoEncontrado);
+    });
+  });
+};
+
 const obtenerArchivo = async (req, res) => {
   try {
-    const { nombreArchivo } = req.params; // Nombre del archivo desde los parámetros de la URL
-    const ruta = decodeURIComponent(req.query.ruta); // Decodifica el parámetro
-    console.log(`Ruta recibida: ${ruta}`);
-    const rutaArchivo = path.join('C:/Users/usuario/Downloads/movimientos', ruta); // Ruta completa del archivo
+    const rutaQuery = decodeURIComponent(req.query.ruta); // Ruta proporcionada en la query
+    console.log(`Ruta recibida: ${rutaQuery}`);
 
-    // Verificar si el archivo existe
-    if (!fs.existsSync(rutaArchivo)) {
+    // Extraer el directorio y el nombre del archivo de la ruta
+    const rutaSinArchivo = path.dirname(rutaQuery); // Directorio base
+    const nombreArchivo = path.basename(rutaQuery, path.extname(rutaQuery)); // Nombre del archivo sin extensión
+    console.log(`Directorio: ${rutaSinArchivo}, Nombre del archivo: ${nombreArchivo}`);
+
+    const rutaDirectorio = path.join('C:/Users/usuario/Downloads/movimientos', rutaSinArchivo); // Ruta completa al directorio
+
+    // Verificar si el directorio existe
+    if (!fs.existsSync(rutaDirectorio)) {
+      return res.status(404).json({ message: 'Directorio no encontrado' });
+    }
+
+    // Buscar el archivo por nombre y obtener su extensión
+    const archivoEncontrado = await buscarArchivoPorNombre(rutaDirectorio, nombreArchivo);
+    const extension = path.extname(archivoEncontrado);
+
+    console.log(`Archivo encontrado: ${archivoEncontrado}, Extensión: ${extension}`);
+
+    const rutaArchivoCompleta = path.join(rutaDirectorio, archivoEncontrado);
+
+    // Verificar si el archivo encontrado existe en el sistema
+    if (!fs.existsSync(rutaArchivoCompleta)) {
       return res.status(404).json({ message: 'Archivo no encontrado' });
     }
 
     // Enviar el archivo como respuesta
-    res.sendFile(rutaArchivo);
+    res.sendFile(rutaArchivoCompleta);
   } catch (error) {
     console.error('Error al obtener el archivo:', error);
     res.status(500).json({ message: 'Error al obtener el archivo', error: error.message });
