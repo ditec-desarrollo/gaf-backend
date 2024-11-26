@@ -1140,9 +1140,16 @@ const registroUsuario = async (req, res) => {
       [email_persona]
     );
     if (resultEmail.length > 0) {
-      return res
-        .status(400)
-        .json({ message: "Email ya registrado", userEmail: email_persona });
+      return res.status(400).json({
+        cuil: resultEmail[0].documento_persona,
+        nombre_persona: resultEmail[0].nombre_persona,
+        apellido_persona: resultEmail[0].apellido_persona,
+        email_persona: resultEmail[0].email_persona,
+        calve: resultEmail[0].clave,
+        telefono_persona: resultEmail[0].telefono_persona,
+        fecha_nacimiento_persona: resultEmail[0].fecha_nacimiento_persona,
+        id_genero: resultEmail[0].id_genero,
+      });
     }
 
     const [resultDocumento] = await connection.query(
@@ -1152,7 +1159,16 @@ const registroUsuario = async (req, res) => {
     if (resultDocumento.length > 0) {
       return res
         .status(400)
-        .json({ message: "DNI ya registrado", userDNI: cuil });
+        .json({
+          cuil: resultEmail[0].documento_persona,
+          nombre_persona: resultEmail[0].nombre_persona,
+          apellido_persona: resultEmail[0].apellido_persona,
+          email_persona: resultEmail[0].email_persona,
+          calve: resultEmail[0].clave,
+          telefono_persona: resultEmail[0].telefono_persona,
+          fecha_nacimiento_persona: resultEmail[0].fecha_nacimiento_persona,
+          id_genero: resultEmail[0].id_genero,
+        });
     }
 
     const empleadoValidado = await validarEmpleado(cuil);
@@ -1386,7 +1402,6 @@ const restablecerClave = async (req, res) => {
   }
 };
 
-
 const editarClave = async (req, res) => {
   let connection;
   try {
@@ -1429,9 +1444,11 @@ const editarClave = async (req, res) => {
       } else {
         // El usuario ya está validado
         await connection.end();
-        return res
-          .status(200)
-          .json({ message: "¡Usuario no validado! El usuario debe estar validado para poder cambiar su clave", ok: false });
+        return res.status(200).json({
+          message:
+            "¡Usuario no validado! El usuario debe estar validado para poder cambiar su clave",
+          ok: false,
+        });
       }
     } else {
       // No se encontró el usuario
@@ -1446,7 +1463,6 @@ const editarClave = async (req, res) => {
       .json({ message: error.message || "Algo salió mal :(" });
   }
 };
-
 
 module.exports = {
   obtenerCategorias,
@@ -1470,5 +1486,5 @@ module.exports = {
   registroUsuario,
   validarUsuario,
   restablecerClave,
-  editarClave
+  editarClave,
 };
