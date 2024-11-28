@@ -705,14 +705,14 @@ const credencial = async (req, res) => {
       [userCuil]
     );
 
-    if (queryResult[0].length > 0) {
+    if (queryResult.length > 0) {
       const {
         nombre_persona,
         apellido_persona,
         documento_persona,
         id_genero,
         fecha_nacimiento_persona,
-      } = queryResult[0][0];
+      } = queryResult[0];
 
       let ciudadano = queryResult[0];
 
@@ -724,7 +724,6 @@ const credencial = async (req, res) => {
         nacimiento: fecha_nacimiento_persona,
       }; // Suponiendo que solo hay un usuario con ese DNI
 
-      console.log(ciudadano.length > 0);
       if (ciudadano.length > 0) {
         // console.log(ciudadano[0].documento_persona);
         const qrCodeDataUrl = await QRCode.toDataURL(
@@ -1157,18 +1156,16 @@ const registroUsuario = async (req, res) => {
       [cuil]
     );
     if (resultDocumento.length > 0) {
-      return res
-        .status(400)
-        .json({
-          cuil: resultEmail[0].documento_persona,
-          nombre_persona: resultEmail[0].nombre_persona,
-          apellido_persona: resultEmail[0].apellido_persona,
-          email_persona: resultEmail[0].email_persona,
-          calve: resultEmail[0].clave,
-          telefono_persona: resultEmail[0].telefono_persona,
-          fecha_nacimiento_persona: resultEmail[0].fecha_nacimiento_persona,
-          id_genero: resultEmail[0].id_genero,
-        });
+      return res.status(400).json({
+        cuil: resultEmail[0].documento_persona,
+        nombre_persona: resultEmail[0].nombre_persona,
+        apellido_persona: resultEmail[0].apellido_persona,
+        email_persona: resultEmail[0].email_persona,
+        calve: resultEmail[0].clave,
+        telefono_persona: resultEmail[0].telefono_persona,
+        fecha_nacimiento_persona: resultEmail[0].fecha_nacimiento_persona,
+        id_genero: resultEmail[0].id_genero,
+      });
     }
 
     const empleadoValidado = await validarEmpleado(cuil);
