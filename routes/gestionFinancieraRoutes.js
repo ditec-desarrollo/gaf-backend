@@ -2,7 +2,8 @@ const { Router } = require("express");
 const auth = require("../middlewares/auth");
 const verifyRole = require("../middlewares/verifyRole");
 
-
+const multer = require('multer');
+const path = require('path');
 
 const { 
     listarAnexos, 
@@ -78,9 +79,16 @@ const {
     editarEncuadreLegal,
     agregarEncuadreLegal,
     eliminarEncuadreLegal,
-    modificarMovimientoAltaDeCompromiso,
+    
     obtenerTiposDeCompras,
-    obtenerDatosItem
+    obtenerDatosItem,
+    obtenerMovimientoReserva,
+    obtenerMovimientoCompromiso,
+    registroCompromisoAlta,
+    obtenerArchivo,
+    modificarAltaDeCompromiso,
+    modificarDefinitiva,
+    obtenerLibramiento
   } = require("../controllers/gestionFinancieraControllers");
   
 
@@ -142,8 +150,36 @@ router.post("/movimiento/alta",agregarMovimiento)
 router.post("/movimiento/altaDefinitivaPreventiva",agregarMovimientoDefinitivaPreventiva)
 router.post("/movimiento/altaPorTransferenciaEntrePartidas",agregarMovimientoPorTransferenciaDePartidas)
 router.patch("/movimiento/editarPorTransferenciaEntrePartidas",modificarMovimientoParaTransferenciaEntrePartidas)
-router.patch("/movimiento/editarAltaDeCompromiso",modificarMovimientoAltaDeCompromiso)
-router.patch("/movimiento/editar",modificarMovimiento)
+
+router.patch("/movimiento/editarAltaDeCompromiso",modificarAltaDeCompromiso)
+
+router.patch("/movimiento/editarDefinitiva",modificarDefinitiva)
+
+
+// Configurar el almacenamiento de los archivos
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, './uploads/'); // Directorio donde se almacenarán los archivos
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); // Nombrar los archivos con un timestamp
+  },
+});
+
+// Inicializar multer
+const upload = multer({ storage: storage });
+
+router.post('/registroCompromiso/alta', upload.fields([
+  { name: 'archivoActa', maxCount: 1 },
+  { name: 'archivoProtocolo', maxCount: 1 },
+  { name: 'archivoFactura', maxCount: 1 },
+]), registroCompromisoAlta); // Llamar al controlador después del middleware de multer
+
+// router.get('/archivo/:nombreArchivo', obtenerArchivo);
+router.get('/archivo', obtenerArchivo);
+
+
+router.patch("/movimiento/editar",modificarMovimiento) //REVISAR
 router.get("/movimiento/tipoInstrumento", obtenerTiposDeInstrumentos)
 
 router.get("/anteproyecto/listar", listarAnteproyecto);
@@ -194,5 +230,10 @@ router.delete("/encuadrelegal/eliminar/:idEliminar", eliminarEncuadreLegal);
 router.get("/tipocompra/listar", obtenerTiposDeCompras)
 
 router.get("/obtenerDatosItem", obtenerDatosItem)
+
+router.get("/obtenerMovimientoReserva", obtenerMovimientoReserva)
+router.get("/obtenerMovimientoCompromiso", obtenerMovimientoCompromiso)
+
+router.get("/obtenerLibramiento", obtenerLibramiento)
 
 module.exports = router;

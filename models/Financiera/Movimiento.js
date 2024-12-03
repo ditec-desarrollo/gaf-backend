@@ -39,6 +39,18 @@ const Movimiento = sequelize.define('Movimiento', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  movimiento_protocolo :{
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  movimiento_actadm :{
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  movimiento_factura :{
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   proveedor_id:{
     type: DataTypes.INTEGER,
     allowNull: true

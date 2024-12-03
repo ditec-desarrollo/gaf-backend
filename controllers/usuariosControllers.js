@@ -217,7 +217,7 @@ const login = async (req, res) => {
       { id: result[0].id_persona },
       process.env.JWT_SECRET_KEY,
       {
-        expiresIn: "1h",
+        expiresIn: "2h",
       }
     );
     const { clave, ...usuarioSinContraseña } = result[0];

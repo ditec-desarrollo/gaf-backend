@@ -6,6 +6,10 @@ const Expediente = require("../models/Financiera/Expediente");
 const { obtenerFechaEnFormatoDate } = require("../utils/helpers");
 const DetMovimientoNomenclador = require("../models/Financiera/DetMovimientoNomenclador");
 const { obtenerFechaDelServidor } = require("../utils/obtenerInfoDelServidor");
+const { funcionMulterGAF } = require("../middlewares/multerArchivosGAF");
+const fs = require('fs');
+const path = require('path');
+
 
 const listarAnexos = async (req, res) => {
   let connection;
@@ -1110,9 +1114,10 @@ const partidaExistente = async (req, res) => {
 
 const agregarMovimiento = async (req, res) => {
   let transaction;
+  let connection;
   try {
     const { movimiento, detMovimiento,expediente, presupuesto, items, encuadreLegal, tipoDeCompra } = req.body;
-console.log(items);
+    console.log(items);
 
     transaction = await sequelize.transaction();
 
@@ -1149,6 +1154,7 @@ console.log(items);
 
     // const movimientoId = result.insertId;
     const movimientoId = nuevoMovimiento.movimiento_id;
+    
 
     for (const detalle of detMovimiento) {
       await DetMovimiento.create(
@@ -1175,10 +1181,27 @@ console.log(items);
         { transaction }
       );
     }
-
+    
     await transaction.commit();
 
-    res.status(200).json({ message: "Movimiento creado con éxito" });
+    if(movimiento.tipomovimiento_id == 1){
+      connection = await conectar_BD_GAF_MySql();
+  
+      const [result] = await connection.execute(
+        'CALL sp_docreserva(?)',
+        [movimientoId]
+      );
+    }
+    // else if(movimiento.tipomovimiento_id == 4){
+    //   connection = await conectar_BD_GAF_MySql();
+  
+    //   const [result] = await connection.execute(
+    //     'CALL sp_doccompromiso(?)',
+    //     [movimientoId]
+    //   );
+    // }
+
+    res.status(200).json({ message: "Movimiento creado con éxito", idMovi: movimientoId });
   } catch (error) {
  
     if(error.name == "SequelizeUniqueConstraintError"){
@@ -1187,13 +1210,20 @@ console.log(items);
 
       res.status(500).json({ message: error.message || "Algo salió mal :(" });
     }
+  }finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
   }
 };
 
 const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
   let transaction;
+  let connection;
   try {
-    const { movimiento, detMovimiento,expediente, presupuesto , proveedor, items, encuadreLegal, tipoDeCompra} = req.body;
+    const { movimiento, detMovimiento,expediente, presupuesto , proveedor, items, encuadreLegal, tipoDeCompra, item_id, libramiento_anio} = req.body;
+console.log(req.body);
 
     transaction = await sequelize.transaction();
 
@@ -1217,6 +1247,7 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
     // const movimientoId = result.insertId;
     const movimientoId = nuevoMovimiento.movimiento_id;
 
+    let totalImporte = 0;
     for (const detalle of detMovimiento) {
       await DetMovimiento.create(
         {
@@ -1226,6 +1257,7 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
         },
         { transaction }
       );
+      totalImporte += detalle.importe;
     }
 
     for (const item of items) {
@@ -1243,11 +1275,52 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
       );
     }
 
+    if(movimiento.tipomovimiento_id == 5){
+      connection = await conectar_BD_GAF_MySql();
+  
+      const [result] = await connection.execute(
+        'SELECT sp_nrolibramiento(?)',
+        [libramiento_anio]
+      );
+
+      const nrolib = result[0]['sp_nrolibramiento(?)'];
+
+      const [result2] = await connection.execute(
+        'SELECT sp_nrolibramientoint(?,?)',
+        [libramiento_anio,item_id]
+      );
+
+      const nrolibint = result2[0]['sp_nrolibramientoint(?,?)'];
+
+      const [result3] = await connection.execute(
+        "INSERT INTO libramiento (libramiento_numero,libramiento_numeroint,libramiento_anio, libramiento_fecha, movimiento_id, proveedor_id, expediente_id, item_id, libramiento_importe, libramiento_concepto, libramiento_factura, libramiento_observaciones) VALUES (?,?,?,?,?,?,?,?,?,?, ?, ?)",
+        [nrolib, nrolibint, libramiento_anio, movimiento.fecha, movimientoId, proveedor.id, expediente.id, item_id, totalImporte, expediente.asunto, movimiento.factura, expediente.observaciones]
+        // TERMINAR
+      );
+
+    }
+
     await transaction.commit();
 
-    res.status(200).json({ message: "Movimiento creado con éxito" });
+    if(movimiento.tipomovimiento_id == 4){
+      connection = await conectar_BD_GAF_MySql();
+  
+      const [result] = await connection.execute(
+        'CALL sp_doccompromiso(?)',
+        [movimientoId]
+      );
+    }
+
+    
+
+    res.status(200).json({ message: "Movimiento creado con éxito", idMovi: movimientoId });
   } catch (error) {
     res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  }finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
   }
 };
 
@@ -1370,7 +1443,74 @@ const obtenerPresupuestosParaMovimientoPresupuestario = async (req, res) => {
   }
 }
 
+const obtenerMovimientoReserva = async (req, res) => {
+  let connection;
+  const idMovi = req.query.idMovi;
+  try {
 
+    connection = await conectar_BD_GAF_MySql();
+
+    let sqlQuery = "SELECT CONCAT(partida_codigo, '_', partida_det) AS Partidas, imputacion_credito AS `Crédito Autorizado`, imputacion_reserva AS `Monto Reserva Interna`, imputacion_compromiso AS Compromiso, imputacion_saldo AS `Saldo Presupuestario`, imputacion_nuevareserva AS `Nueva Reserva`, imputacion_nuevomontoreservado AS `Nuevo Monto Reservado` FROM movimiento_reserva WHERE movimiento_id = ? ORDER BY partida_codigo";
+    const [tablaPorPartidas] = await connection.execute(sqlQuery,[idMovi]);
+
+    res.status(200).json({ tablaPorPartidas });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
+
+const obtenerMovimientoCompromiso = async (req, res) => {
+  let connection;
+  const idMovi = req.query.idMovi;
+  try {
+
+    connection = await conectar_BD_GAF_MySql();
+
+    let sqlQuery = "SELECT CONCAT(partida_codigo, '_', partida_det) AS Partidas, imputacion_credito AS `Crédito Autorizado`, imputacion_saldo AS `Saldo Presupuestario`, imputacion_compromiso AS Compromiso, imputacion_nuevosaldo AS `Nuevo Saldo Presupuestario` FROM movimiento_compromiso WHERE movimiento_id = ? ORDER BY partida_codigo";
+    const [tablaPorPartidas] = await connection.execute(sqlQuery,[idMovi]);
+
+    res.status(200).json({ tablaPorPartidas });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
+
+const obtenerLibramiento = async (req, res) => {
+  let connection;
+  const idMovi = req.query.idMovi;
+  try {
+
+    connection = await conectar_BD_GAF_MySql();
+
+    let sqlQuery = "SELECT * FROM libramiento WHERE movimiento_id = ?";
+    const [libramiento] = await connection.execute(sqlQuery,[idMovi]);
+
+    res.status(200).json({ libramiento });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
+
+
+// REVISARRRRRRRRR. no se esta usando por el momento
 const modificarMovimiento = async (req, res) => {
   const {  movimiento, detMovimiento, proveedor, items, encuadreLegal,expediente,tipoDeInstrumento, tipoDeCompra } = req.body;
 
@@ -1408,7 +1548,7 @@ const modificarMovimiento = async (req, res) => {
     }
 
       await connection.commit();
-      res.status(200).json({ message: 'Movimiento actualizado correctamente' });
+      res.status(200).json({ message: 'Movimiento actualizado correctamente', idMovi: movimiento.id });
   } catch (error) {
     console.log(error);
       await connection.rollback();
@@ -1421,17 +1561,19 @@ const modificarMovimiento = async (req, res) => {
   }
 };
 
-const modificarMovimientoAltaDeCompromiso= async (req, res) => {
-  const { expediente, tipoDeInstrumento, movimiento} = req.body;
+const modificarAltaDeCompromiso= async (req,res) => {
+const {encuadreLegal, tipoDeCompra, proveedor, movimiento} =req.body
+let connection;
+try {
+   connection = await conectar_BD_GAF_MySql();
+   
+    await connection.query("UPDATE movimiento SET proveedor_id = ?, encuadrelegal_id = ?, tipocompra_id = ? WHERE movimiento_id = ?",[proveedor.id,encuadreLegal,tipoDeCompra, movimiento.id])
+  
+    res.status(200).json({ message: 'Movimiento actualizado correctamente', idMovi: movimiento.id });
 
-  let connection;
-  try {
-    connection = await conectar_BD_GAF_MySql();
-    await connection.query("UPDATE movimiento SET tipoinstrumento_id = ?, instrumento_nro = ? WHERE movimiento_id = ?",[tipoDeInstrumento,expediente.numeroInstrumento,movimiento.id])
-    res.status(200).json({ message: 'Movimiento actualizado correctamente' });
   } catch (error) {
       console.log(error);
-      res.status(500).json({ message: 'Error al actualizar el instrumento del movimiento', error });
+      res.status(500).json({ message: 'Error al actualizar los detalles de movimiento', error });
   } finally {
     // Cerrar la conexión a la base de datos
     if (connection) {
@@ -1439,6 +1581,198 @@ const modificarMovimientoAltaDeCompromiso= async (req, res) => {
     }
   }
 }
+
+const modificarDefinitiva= async (req,res) => {
+  const {numeroInstrumento, idMovimiento} =req.body
+  console.log(req.body);
+  
+  let connection;
+  try {
+     connection = await conectar_BD_GAF_MySql();
+     
+      await connection.query("UPDATE movimiento SET instrumento_nro = ? WHERE movimiento_id = ?",[numeroInstrumento, idMovimiento])
+    
+      res.status(200).json({ message: 'Movimiento actualizado correctamente', idMovi:idMovimiento });
+  
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Error al actualizar los detalles de movimiento', error });
+    } finally {
+      // Cerrar la conexión a la base de datos
+      if (connection) {
+        await connection.end();
+      }
+    }
+  }
+
+const modificarMovimientoAltaDeCompromiso= async (expediente, tipoDeInstrumento, movimiento, connection) => {
+
+  try {
+   
+    await connection.query("UPDATE movimiento SET tipoinstrumento_id = ?, instrumento_nro = ?, movimiento_protocolo = ?, movimiento_actadm = ?,  movimiento_factura = ? WHERE movimiento_id = ?",[tipoDeInstrumento,expediente.numeroInstrumento, expediente.numeroProtocolo, expediente.numeroActa, expediente.numeroFactura, movimiento.id])
+  
+  } catch (error) {
+      console.log(error);
+      throw new Error('Error al actualizar el movimiento: ' + error.message);
+  }
+}
+
+
+const moverArchivos = (file, destino) => {
+  return new Promise((resolve, reject) => {
+    const archivoOrigen = file.path;  // Ruta del archivo original en 'uploads'
+    console.log(file);
+    const extension = path.extname(file.originalname);
+
+    const archivoDestino = path.join(destino, `${file.fieldname}${extension}`);  // Ruta de destino completa
+
+    fs.rename(archivoOrigen, archivoDestino, (err) => {
+      if (err) {
+        reject(err);  // Si hay un error, lo rechazamos
+      } else {
+        resolve(archivoDestino);  // Si el archivo se movió con éxito
+      }
+    });
+  });
+};
+
+
+const registroCompromisoAlta = async (req, res) => {
+  let connection;
+  const { expediente, tipoDeInstrumento, movimiento } = req.body;
+  try {
+    // Ver los archivos subidos
+    let obj;
+    try {
+      const requestDataString = req.body.requestData; // Accede al string JSON
+      obj = JSON.parse(requestDataString); // Intenta convertir el string en un objeto
+      console.log(obj); // Imprime el objeto
+    } catch (error) {
+      console.error('Error al parsear el JSON:', error);
+      // Maneja el error, por ejemplo, enviando una respuesta de error al cliente
+      return res.status(400).json({ message: 'Error al procesar los datos' });
+    }
+
+    connection = await conectar_BD_GAF_MySql();
+
+    // Carpeta de destino
+    const destino = `C:/xampp/htdocs/gaf/movimientos/${obj.movimiento.id}/${obj.movimiento.tipomovimiento_id}`;  // Ruta de destino
+
+    // Asegúrate de que la carpeta destino exista, si no, crea una
+    if (!fs.existsSync(destino)) {
+      fs.mkdirSync(destino, { recursive: true });  // Crea la carpeta si no existe
+    }
+
+    // Mover cada archivo subido a la carpeta de destino
+    const archivosMovidos = await Promise.all(
+      Object.values(req.files).map(async (archivos) => {
+        // Mover cada archivo
+        return await Promise.all(
+          archivos.map(async (archivo) => {
+            const archivoDestino = await moverArchivos(archivo, destino);
+            console.log(`Archivo movido: ${archivoDestino}`);
+            return archivoDestino;
+          })
+        );
+      })
+    );
+
+    await modificarMovimientoAltaDeCompromiso(obj.expediente, obj.tipoDeInstrumento, obj.movimiento, connection);
+
+    // Si todo fue bien, respondemos con un mensaje de éxito
+    res.status(200).json({ message: 'Movimiento actualizado correctamente', archivos: archivosMovidos });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Hubo un error en el proceso', error: error.message });
+  }finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
+
+
+// const obtenerArchivo = async (req, res) => {
+//   try {
+//     const { nombreArchivo } = req.params; // Nombre del archivo desde los parámetros de la URL
+    
+//     const ruta = decodeURIComponent(req.query.ruta); // Decodifica el parámetro
+//     console.log(`Ruta recibida: ${ruta}`);
+//     const rutaArchivo = path.join('C:/Users/usuario/Downloads/movimientos', ruta); // Ruta completa del archivo
+
+//     // Verificar si el archivo existe
+//     if (!fs.existsSync(rutaArchivo)) {
+//       return res.status(404).json({ message: 'Archivo no encontrado' });
+//     }
+
+//     // Enviar el archivo como respuesta
+//     res.sendFile(rutaArchivo);
+//   } catch (error) {
+//     console.error('Error al obtener el archivo:', error);
+//     res.status(500).json({ message: 'Error al obtener el archivo', error: error.message });
+//   }
+// };
+
+const buscarArchivoPorNombre = (directorio, nombreArchivo) => {
+  return new Promise((resolve, reject) => {
+    fs.readdir(directorio, (err, archivos) => {
+      if (err) {
+        return reject(err);
+      }
+
+      // Buscar archivo que coincida con el nombre proporcionado
+      const archivoEncontrado = archivos.find((archivo) => path.parse(archivo).name === nombreArchivo);
+
+      if (!archivoEncontrado) {
+        return reject(new Error(`Archivo con nombre "${nombreArchivo}" no encontrado en el directorio.`));
+      }
+
+      // Devolver la extensión del archivo encontrado
+      resolve(archivoEncontrado);
+    });
+  });
+};
+
+const obtenerArchivo = async (req, res) => {
+  try {
+    const rutaQuery = decodeURIComponent(req.query.ruta); // Ruta proporcionada en la query
+    console.log(`Ruta recibida: ${rutaQuery}`);
+
+    // Extraer el directorio y el nombre del archivo de la ruta
+    const rutaSinArchivo = path.dirname(rutaQuery); // Directorio base
+    const nombreArchivo = path.basename(rutaQuery, path.extname(rutaQuery)); // Nombre del archivo sin extensión
+    console.log(`Directorio: ${rutaSinArchivo}, Nombre del archivo: ${nombreArchivo}`);
+
+    const rutaDirectorio = path.join('C:/Users/usuario/Downloads/movimientos', rutaSinArchivo); // Ruta completa al directorio
+
+    // Verificar si el directorio existe
+    if (!fs.existsSync(rutaDirectorio)) {
+      return res.status(404).json({ message: 'Directorio no encontrado' });
+    }
+
+    // Buscar el archivo por nombre y obtener su extensión
+    const archivoEncontrado = await buscarArchivoPorNombre(rutaDirectorio, nombreArchivo);
+    const extension = path.extname(archivoEncontrado);
+
+    console.log(`Archivo encontrado: ${archivoEncontrado}, Extensión: ${extension}`);
+
+    const rutaArchivoCompleta = path.join(rutaDirectorio, archivoEncontrado);
+
+    // Verificar si el archivo encontrado existe en el sistema
+    if (!fs.existsSync(rutaArchivoCompleta)) {
+      return res.status(404).json({ message: 'Archivo no encontrado' });
+    }
+
+    // Enviar el archivo como respuesta
+    res.sendFile(rutaArchivoCompleta);
+  } catch (error) {
+    console.error('Error al obtener el archivo:', error);
+    res.status(500).json({ message: 'Error al obtener el archivo', error: error.message });
+  }
+};
+
 
 const buscarExpediente = async (req, res) => {
   let connection;
@@ -1450,7 +1784,7 @@ const buscarExpediente = async (req, res) => {
 
     // Primera consulta: Obtener los detalles del expediente
     const query1 = `
-    SELECT e.*, m.presupuesto_id,m.movimiento_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,m.encuadrelegal_id, prov.*, d.detmovimiento_id,d.detpresupuesto_id,d.detmovimiento_importe, dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones, i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id
+    SELECT e.*, m.presupuesto_id,m.movimiento_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,m.encuadrelegal_id,m.movimiento_protocolo, m.movimiento_actadm, m.movimiento_factura, prov.*, d.detmovimiento_id,d.detpresupuesto_id,d.detmovimiento_importe, dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones, i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id
     FROM expediente AS e
     LEFT JOIN movimiento AS m ON e.expediente_id = m.expediente_id
     LEFT JOIN encuadrelegal AS el ON m.encuadrelegal_id = el.encuadrelegal_id 
@@ -2283,12 +2617,13 @@ const agregarProveedor = async (req, res) => {
 
     // Consulta para insertar un nuevo proveedor
     const sqlInsertProveedor = `
-      INSERT INTO proveedores (proveedor_razsocial, proveedor_cuit, proveedor_domicilio, proveedor_email, proveedor_iva, proveedor_nroreso, proveedor_anioreso,proveedor_telefono,proveedor_contacto, proveedor_registro)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO proveedores (proveedor_razsocial, proveedor_cuit, proveedor_domicilio, proveedor_email, proveedor_iva, proveedor_nroreso, proveedor_anioreso,proveedor_telefono,proveedor_contacto, proveedor_registro, proveedor_compras)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const {fecha_actual} =  await obtenerFechaDelServidor()
-
+    const noRegistrado =  req.body.no_registrado
+    
     // Ejecución de la consulta con los valores a insertar
     const [result] = await connection.execute(sqlInsertProveedor, [
       razonSocial.toUpperCase(),
@@ -2300,7 +2635,8 @@ const agregarProveedor = async (req, res) => {
       anioreso,
       telefono,
       contacto,
-      fecha_actual
+      fecha_actual,
+      noRegistrado ? 0 : 1
     ]);
 
     // Verificar si alguna fila fue afectada (es decir, si el proveedor fue insertado)
@@ -2922,7 +3258,8 @@ module.exports = {
   buscarExpedienteParaModificarPorTransferenciaEntrePartidas,
   obtenerNomencladores,
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
- obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem
+ obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem,
+ obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo,modificarAltaDeCompromiso, modificarDefinitiva, obtenerLibramiento
 };
 
 
