@@ -79,13 +79,16 @@ const {
     editarEncuadreLegal,
     agregarEncuadreLegal,
     eliminarEncuadreLegal,
-    modificarMovimientoAltaDeCompromiso,
+    
     obtenerTiposDeCompras,
     obtenerDatosItem,
     obtenerMovimientoReserva,
     obtenerMovimientoCompromiso,
     registroCompromisoAlta,
-    obtenerArchivo
+    obtenerArchivo,
+    modificarAltaDeCompromiso,
+    modificarDefinitiva,
+    obtenerLibramiento
   } = require("../controllers/gestionFinancieraControllers");
   
 
@@ -148,7 +151,9 @@ router.post("/movimiento/altaDefinitivaPreventiva",agregarMovimientoDefinitivaPr
 router.post("/movimiento/altaPorTransferenciaEntrePartidas",agregarMovimientoPorTransferenciaDePartidas)
 router.patch("/movimiento/editarPorTransferenciaEntrePartidas",modificarMovimientoParaTransferenciaEntrePartidas)
 
-router.patch("/movimiento/editarAltaDeCompromiso",modificarMovimientoAltaDeCompromiso)
+router.patch("/movimiento/editarAltaDeCompromiso",modificarAltaDeCompromiso)
+
+router.patch("/movimiento/editarDefinitiva",modificarDefinitiva)
 
 
 // Configurar el almacenamiento de los archivos
@@ -174,7 +179,7 @@ router.post('/registroCompromiso/alta', upload.fields([
 router.get('/archivo', obtenerArchivo);
 
 
-router.patch("/movimiento/editar",modificarMovimiento)
+router.patch("/movimiento/editar",modificarMovimiento) //REVISAR
 router.get("/movimiento/tipoInstrumento", obtenerTiposDeInstrumentos)
 
 router.get("/anteproyecto/listar", listarAnteproyecto);
@@ -228,5 +233,7 @@ router.get("/obtenerDatosItem", obtenerDatosItem)
 
 router.get("/obtenerMovimientoReserva", obtenerMovimientoReserva)
 router.get("/obtenerMovimientoCompromiso", obtenerMovimientoCompromiso)
+
+router.get("/obtenerLibramiento", obtenerLibramiento)
 
 module.exports = router;
