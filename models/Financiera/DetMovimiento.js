@@ -15,7 +15,7 @@ const DetMovimiento = sequelize.define('DetMovimiento', {
     allowNull: false
   },
   detmovimiento_importe: {
-    type: DataTypes.STRING,
+    type: DataTypes.DECIMAL,
     allowNull: false
   },
   movimiento_id: {

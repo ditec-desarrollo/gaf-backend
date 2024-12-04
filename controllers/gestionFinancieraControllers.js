@@ -1253,11 +1253,11 @@ console.log(req.body);
         {
           movimiento_id: movimientoId,
           detpresupuesto_id: detalle.detPresupuesto_id,
-          detmovimiento_importe: detalle.importe,
+          detmovimiento_importe: parseFloat(detalle.importe),
         },
         { transaction }
       );
-      totalImporte += detalle.importe;
+      totalImporte += parseFloat(detalle.importe);
     }
 
     for (const item of items) {
@@ -1291,6 +1291,8 @@ console.log(req.body);
       );
 
       const nrolibint = result2[0]['sp_nrolibramientoint(?,?)'];
+console.log(totalImporte);
+console.log(typeof totalImporte);
 
       const [result3] = await connection.execute(
         "INSERT INTO libramiento (libramiento_numero,libramiento_numeroint,libramiento_anio, libramiento_fecha, movimiento_id, proveedor_id, expediente_id, item_id, libramiento_importe, libramiento_concepto, libramiento_factura, libramiento_observaciones) VALUES (?,?,?,?,?,?,?,?,?,?, ?, ?)",
