@@ -1745,7 +1745,8 @@ const obtenerArchivo = async (req, res) => {
     const nombreArchivo = path.basename(rutaQuery, path.extname(rutaQuery)); // Nombre del archivo sin extensión
     console.log(`Directorio: ${rutaSinArchivo}, Nombre del archivo: ${nombreArchivo}`);
 
-    const rutaDirectorio = path.join('C:/Users/usuario/Downloads/movimientos', rutaSinArchivo); // Ruta completa al directorio
+    // const rutaDirectorio = path.join('C:/Users/usuario/Downloads/movimientos', rutaSinArchivo);
+    const rutaDirectorio = path.join('C:/xampp/htdocs/gaf/movimientos', rutaSinArchivo);
 
     // Verificar si el directorio existe
     if (!fs.existsSync(rutaDirectorio)) {
