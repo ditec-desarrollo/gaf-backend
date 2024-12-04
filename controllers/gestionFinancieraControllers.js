@@ -2526,7 +2526,7 @@ const editarProveedor = async (req, res) => {
     // Actualizar el proveedor
     const sqlUpdateProveedor = `
       UPDATE proveedores
-      SET proveedor_razsocial = ?, proveedor_cuit = ?, proveedor_domicilio = ?, proveedor_email = ?, proveedor_iva = ?, proveedor_nroreso = ?, proveedor_anioreso = ?,proveedor_telefono=?,proveedor_contacto=?
+      SET proveedor_razsocial = ?, proveedor_cuit = ?, proveedor_domicilio = ?, proveedor_email = ?, proveedor_iva = ?, proveedor_nroreso = ?, proveedor_anioreso = ?,proveedor_telefono=?,proveedor_contacto=?,proveedor_compras=?
       WHERE proveedor_id = ?
     `;
 
@@ -2540,6 +2540,7 @@ const editarProveedor = async (req, res) => {
       proveedor_anioreso,
       proveedor_telefono,
       proveedor_contacto,
+      1,
       proveedor_id,
     ]);
 
@@ -2796,6 +2797,39 @@ const agregarRubro = async (req, res) => {
     }
   }
 };
+
+
+
+
+
+const buscarProveedorPorCuit = async (req, res) => {
+  const { cuit } = req.params; // CUIT enviado como parámetro en la URL
+  const connection = await conectar_BD_GAF_MySql(); // Conexión a la base de datos
+
+  try {
+    // Consultar en la tabla proveedores si existe un proveedor con el cuit dado
+    const [proveedores] = await connection.execute(
+      'SELECT * FROM proveedores WHERE proveedor_cuit = ?',
+      [cuit]
+    );
+
+    // Si no se encuentra ningún proveedor, devolver un error 404
+    if (proveedores.length === 0) {
+      return res.status(200).json({ message: 'Proveedor no encontrado',ok:false });
+    }
+
+    // Devolver la fila completa del proveedor encontrado
+    res.status(200).json({proveedor:proveedores[0],ok:true});
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message || 'Algo salió mal :(' });
+  } finally {
+    if (connection) {
+      await connection.end(); // Cerrar la conexión a la base de datos
+    }
+  }
+};
+
 
 /////////////////////// NOMENCLADORES ////////////////////////////////
 
@@ -3259,7 +3293,7 @@ module.exports = {
   obtenerNomencladores,
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
  obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem,
- obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo,modificarAltaDeCompromiso, modificarDefinitiva, obtenerLibramiento
+ obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo,modificarAltaDeCompromiso, modificarDefinitiva, obtenerLibramiento,buscarProveedorPorCuit
 };
 
 

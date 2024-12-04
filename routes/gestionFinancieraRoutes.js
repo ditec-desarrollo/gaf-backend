@@ -88,7 +88,8 @@ const {
     obtenerArchivo,
     modificarAltaDeCompromiso,
     modificarDefinitiva,
-    obtenerLibramiento
+    obtenerLibramiento,
+    buscarProveedorPorCuit
   } = require("../controllers/gestionFinancieraControllers");
   
 
@@ -206,6 +207,7 @@ router.get("/proveedores/listar", obtenerProveedores);
 router.put("/proveedores/editar", editarProveedor);
 router.post("/proveedores/agregar", agregarProveedor);
 router.delete("/proveedores/eliminar/:idEliminar", eliminarProveedor);
+router.get('/proveedores/:cuit', buscarProveedorPorCuit);
 
 //EJECUCION DE GASTOS
 router.get("/proveedor/listar", obtenerProveedor);
