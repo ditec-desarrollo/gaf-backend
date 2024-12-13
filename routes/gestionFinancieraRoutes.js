@@ -96,65 +96,69 @@ const {
 
 const router = Router();
 
-router.get("/anexo/listar", listarAnexos);
-router.post("/anexo/alta", agregarAnexo)
-router.put("/anexo/editar/:id",editarAnexo)
-router.delete("/anexo/borrar", borrarAnexo)
+//YA corregido con LOG
+router.get("/anexo/listar",auth,  listarAnexos);
+router.post("/anexo/alta",auth,  agregarAnexo)
+router.put("/anexo/editar/:id",auth, editarAnexo)
+router.delete("/anexo/borrar",auth,  borrarAnexo)
 
-router.get("/funcion/listar", listarFunciones);
-router.post("/funcion/alta", agregarFuncion)
-router.put("/funcion/editar/:id",editarFuncion)
-router.delete("/funcion/borrar", borrarFuncion)
+//YA corregido con LOG
+router.get("/funcion/listar",auth,  listarFunciones);
+router.post("/funcion/alta",auth,  agregarFuncion)
+router.put("/funcion/editar/:id",auth, editarFuncion)
+router.delete("/funcion/borrar",auth,  borrarFuncion)
 
-router.get("/finalidad/listar", listarFinalidades);
-router.post("/finalidad/alta", agregarFinalidad)
-router.put("/finalidad/editar/:id",editarFinalidad)
-router.delete("/finalidad/borrar", borrarFinalidad)
+//YA corregido con LOG
+router.get("/finalidad/listar",auth,  listarFinalidades);
+router.post("/finalidad/alta",auth, agregarFinalidad)
+router.put("/finalidad/editar/:id",auth,editarFinalidad)
+router.delete("/finalidad/borrar",auth, borrarFinalidad)
 
-router.get("/ejercicio/listar", listarEjercicio);
-router.post("/ejercicio/alta", agregarEjercicio)
-router.put("/ejercicio/editar/:id",editarEjercicio)
-router.delete("/ejercicio/borrar", borrarEjercicio)
+//YA corregido con LOG
+router.get("/ejercicio/listar",auth,  listarEjercicio);
+router.post("/ejercicio/alta",auth,  agregarEjercicio)
+router.put("/ejercicio/editar/:id",auth, editarEjercicio)
+router.delete("/ejercicio/borrar",auth,  borrarEjercicio)
 
-router.get("/item/listar", listarItems);
-router.get("/item/listarSinPartidas", listarItemsSinPartidas);
-router.post("/item/listar/:cuil", listarItemsFiltrado);
-router.post("/item/alta", agregarItem)
-router.put("/item/editar/:id",editarItem)
-router.delete("/item/borrar", borrarItem)
+router.get("/item/listar",auth,  listarItems);
+router.get("/item/listarSinPartidas",auth,  listarItemsSinPartidas);
+router.post("/item/listar/:cuil",auth,  listarItemsFiltrado);
+router.post("/item/alta",auth,  agregarItem)
+router.put("/item/editar/:id",auth, editarItem)
+router.delete("/item/borrar",auth,  borrarItem)
 
-router.get("/partida/obtenerPartidasPorItemYMovimiento",obtenerPartidasPorItemYMovimiento)
-router.get("/partida/listar", listarPartidas);
-router.get("/partida/listarConCodigo", listarPartidasConCodigo);
-router.get("/partida/listarConCodigoGasto", listarPartidasConCodigoGasto);
-router.get("/partida/listar/concat", listarPartidasCONCAT);
-router.post("/partida/existente", partidaExistente);
-router.post("/partida/alta", agregarPartida)
-router.put("/partida/editar/:id",editarPartida)
-router.delete("/partida/borrar", borrarPartida)
+router.get("/partida/obtenerPartidasPorItemYMovimiento",auth, obtenerPartidasPorItemYMovimiento)
+router.get("/partida/listar",auth,  listarPartidas);
+router.get("/partida/listarConCodigo",auth,  listarPartidasConCodigo);
+router.get("/partida/listarConCodigoGasto",auth,  listarPartidasConCodigoGasto);
+router.get("/partida/listar/concat",auth,  listarPartidasCONCAT);
+router.post("/partida/existente",auth,  partidaExistente);
+router.post("/partida/alta",auth,  agregarPartida)
+router.put("/partida/editar/:id",auth, editarPartida)
+router.delete("/partida/borrar",auth,  borrarPartida)
 
-router.get("/tipoDeMovimiento/listar", listarTiposDeMovimientos);
+router.get("/tipoDeMovimiento/listar",auth, listarTiposDeMovimientos);
 
-router.get("/organismo/listar", listarOrganismos);
+router.get("/organismo/listar",auth, listarOrganismos);
 
-router.post("/expediente/alta",agregarExpediente)
-router.get("/expediente/buscar", buscarExpediente)
-router.get("/expediente/buscarExpedienteComun", buscarExpedienteParaModificarDefinitiva)
-router.get("/expediente/buscarExpedienteParaTransferencias", buscarExpedienteParaModificarPorTransferenciaEntrePartidas)
+router.post("/expediente/alta",auth,agregarExpediente) //YA corregido con LOG
+router.get("/expediente/buscar",auth, buscarExpediente)
+router.get("/expediente/buscarExpedienteComun",auth, buscarExpedienteParaModificarDefinitiva)
+router.get("/expediente/buscarExpedienteParaTransferencias",auth, buscarExpedienteParaModificarPorTransferenciaEntrePartidas)
 
-router.patch("/editarDetalleMovimiento", editarDetalleMovimiento)
+router.patch("/editarDetalleMovimiento",auth, editarDetalleMovimiento)
 
-router.get("/detPresupuesto/obtenerPorItemYPartida", obtenerDetPresupuestoPorItemYpartida)
-router.get("/detPresupuesto/obtenerSaldoPorDetPresupuestoID", obtenerSaldoPorDetPresupuestoID)
+router.get("/detPresupuesto/obtenerPorItemYPartida",auth, obtenerDetPresupuestoPorItemYpartida)
+router.get("/detPresupuesto/obtenerSaldoPorDetPresupuestoID",auth, obtenerSaldoPorDetPresupuestoID)
 
-router.post("/movimiento/alta",agregarMovimiento)
-router.post("/movimiento/altaDefinitivaPreventiva",agregarMovimientoDefinitivaPreventiva)
-router.post("/movimiento/altaPorTransferenciaEntrePartidas",agregarMovimientoPorTransferenciaDePartidas)
-router.patch("/movimiento/editarPorTransferenciaEntrePartidas",modificarMovimientoParaTransferenciaEntrePartidas)
+router.post("/movimiento/alta",auth,agregarMovimiento)
+router.post("/movimiento/altaDefinitivaPreventiva",auth,agregarMovimientoDefinitivaPreventiva)
+router.post("/movimiento/altaPorTransferenciaEntrePartidas",auth,agregarMovimientoPorTransferenciaDePartidas)
+router.patch("/movimiento/editarPorTransferenciaEntrePartidas",auth,modificarMovimientoParaTransferenciaEntrePartidas)
 
-router.patch("/movimiento/editarAltaDeCompromiso",modificarAltaDeCompromiso)
+router.patch("/movimiento/editarAltaDeCompromiso",auth,modificarAltaDeCompromiso)
 
-router.patch("/movimiento/editarDefinitiva",modificarDefinitiva)
+router.patch("/movimiento/editarDefinitiva",auth,modificarDefinitiva)
 
 
 // Configurar el almacenamiento de los archivos
@@ -170,72 +174,72 @@ const storage = multer.diskStorage({
 // Inicializar multer
 const upload = multer({ storage: storage });
 
-router.post('/registroCompromiso/alta', upload.fields([
+router.post('/registroCompromiso/alta',auth, upload.fields([
   { name: 'archivoActa', maxCount: 1 },
   { name: 'archivoProtocolo', maxCount: 1 },
   { name: 'archivoFactura', maxCount: 1 },
 ]), registroCompromisoAlta); // Llamar al controlador después del middleware de multer
 
 // router.get('/archivo/:nombreArchivo', obtenerArchivo);
-router.get('/archivo', obtenerArchivo);
+router.get('/archivo',auth, obtenerArchivo);
 
 
-router.patch("/movimiento/editar",modificarMovimiento) //REVISAR
-router.get("/movimiento/tipoInstrumento", obtenerTiposDeInstrumentos)
+router.patch("/movimiento/editar",auth,modificarMovimiento) //REVISAR
+router.get("/movimiento/tipoInstrumento",auth, obtenerTiposDeInstrumentos)
 
-router.get("/anteproyecto/listar", listarAnteproyecto);
+router.get("/anteproyecto/listar",auth, listarAnteproyecto);
 
-router.put("/anteproyecto/editar", actualizarPresupuestoAnteproyecto);
+router.put("/anteproyecto/editar",auth, actualizarPresupuestoAnteproyecto);
 
-router.put("/credito/editar", actualizarCredito);
+router.put("/credito/editar",auth, actualizarCredito);
 
-router.put("/credito/editarCompleto", actualizarCreditoCompleto);
+router.put("/credito/editarCompleto",auth, actualizarCreditoCompleto);
 
-router.put("/presupuesto/editar", actualizarPresupuestoAprobado);
-router.get("/presupuesto/listar", obtenerPresupuestosParaMovimientoPresupuestario)
+router.put("/presupuesto/editar",auth, actualizarPresupuestoAprobado);
+router.get("/presupuesto/listar",auth, obtenerPresupuestosParaMovimientoPresupuestario)
 
-router.put("/presupuesto/editarCompleto", actualizarPresupuestoAprobadoCompleto);
+router.put("/presupuesto/editarCompleto",auth, actualizarPresupuestoAprobadoCompleto);
 
-router.put("/acumular", acumular);
+router.put("/acumular",auth, acumular);
 
-router.post('/perfil/:cuil', obtenerPerfilPorCuil);
+router.post('/perfil/:cuil',auth, obtenerPerfilPorCuil);
 
-router.post('/anteproyecto/crearEstructura', crearEstructuraItem);
+router.post('/anteproyecto/crearEstructura',auth, crearEstructuraItem);
 
 
-router.get("/proveedores/listar", obtenerProveedores);
-router.put("/proveedores/editar", editarProveedor);
-router.post("/proveedores/agregar", agregarProveedor);
-router.delete("/proveedores/eliminar/:idEliminar", eliminarProveedor);
-router.get('/proveedores/:cuit', buscarProveedorPorCuit);
+router.get("/proveedores/listar",auth, obtenerProveedores);
+router.put("/proveedores/editar",auth, editarProveedor);
+router.post("/proveedores/agregar",auth, agregarProveedor);
+router.delete("/proveedores/eliminar/:idEliminar",auth, eliminarProveedor);
+router.get('/proveedores/:cuit',auth, buscarProveedorPorCuit);
 
 //EJECUCION DE GASTOS
-router.get("/proveedor/listar", obtenerProveedor);
+router.get("/proveedor/listar",auth, obtenerProveedor);
 //
 
-router.get("/rubros/listar", obtenerRubros);
-router.post("/rubros/agregar", agregarRubro);
+router.get("/rubros/listar",auth, obtenerRubros);
+router.post("/rubros/agregar",auth, agregarRubro);
 
-router.get("/nomencladores/listar", obtenerNomencladores);
-router.put("/nomencladores/editar", editarNomenclador);
-router.post("/nomencladores/agregar", agregarNomenclador);
-router.delete("/nomencladores/eliminar/:idEliminar", eliminarNomenclador);
+router.get("/nomencladores/listar",auth, obtenerNomencladores);
+router.put("/nomencladores/editar",auth, editarNomenclador);
+router.post("/nomencladores/agregar",auth, agregarNomenclador);
+router.delete("/nomencladores/eliminar/:idEliminar",auth, eliminarNomenclador);
 
-router.get("/detmovimiento_nomenclador/buscar", buscarExpedienteParaModificarNomenclador);
+router.get("/detmovimiento_nomenclador/buscar",auth, buscarExpedienteParaModificarNomenclador);
 
-router.get("/encuadres/listar", obtenerEncuadres)
-router.get("/encuadrelegal/listar", obtenerEncuadresLegales);
-router.put("/encuadrelegal/editar", editarEncuadreLegal);
-router.post("/encuadrelegal/agregar", agregarEncuadreLegal);
-router.delete("/encuadrelegal/eliminar/:idEliminar", eliminarEncuadreLegal);
+router.get("/encuadres/listar",auth, obtenerEncuadres)
+router.get("/encuadrelegal/listar",auth, obtenerEncuadresLegales);
+router.put("/encuadrelegal/editar",auth, editarEncuadreLegal);
+router.post("/encuadrelegal/agregar",auth, agregarEncuadreLegal);
+router.delete("/encuadrelegal/eliminar/:idEliminar",auth, eliminarEncuadreLegal);
 
-router.get("/tipocompra/listar", obtenerTiposDeCompras)
+router.get("/tipocompra/listar",auth, obtenerTiposDeCompras)
 
-router.get("/obtenerDatosItem", obtenerDatosItem)
+router.get("/obtenerDatosItem",auth, obtenerDatosItem)
 
-router.get("/obtenerMovimientoReserva", obtenerMovimientoReserva)
-router.get("/obtenerMovimientoCompromiso", obtenerMovimientoCompromiso)
+router.get("/obtenerMovimientoReserva",auth, obtenerMovimientoReserva)
+router.get("/obtenerMovimientoCompromiso",auth, obtenerMovimientoCompromiso)
 
-router.get("/obtenerLibramiento", obtenerLibramiento)
+router.get("/obtenerLibramiento",auth, obtenerLibramiento)
 
 module.exports = router;
