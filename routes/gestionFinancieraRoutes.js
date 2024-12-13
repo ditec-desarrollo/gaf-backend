@@ -91,8 +91,6 @@ const {
     obtenerLibramiento,
     buscarProveedorPorCuit
   } = require("../controllers/gestionFinancieraControllers");
-  
-
 
 const router = Router();
 
