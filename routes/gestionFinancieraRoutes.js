@@ -118,13 +118,15 @@ router.post("/ejercicio/alta",auth,  agregarEjercicio)
 router.put("/ejercicio/editar/:id",auth, editarEjercicio)
 router.delete("/ejercicio/borrar",auth,  borrarEjercicio)
 
+//YA corregido con LOG
 router.get("/item/listar",auth,  listarItems);
 router.get("/item/listarSinPartidas",auth,  listarItemsSinPartidas);
 router.post("/item/listar/:cuil",auth,  listarItemsFiltrado);
-router.post("/item/alta",auth,  agregarItem)
-router.put("/item/editar/:id",auth, editarItem)
-router.delete("/item/borrar",auth,  borrarItem)
+router.post("/item/alta",auth,  agregarItem) //YA corregido con LOG
+router.put("/item/editar/:id",auth, editarItem) //YA corregido con LOG
+router.delete("/item/borrar",auth,  borrarItem) //YA corregido con LOG
 
+//YA corregido con LOG
 router.get("/partida/obtenerPartidasPorItemYMovimiento",auth, obtenerPartidasPorItemYMovimiento)
 router.get("/partida/listar",auth,  listarPartidas);
 router.get("/partida/listarConCodigo",auth,  listarPartidasConCodigo);
@@ -133,30 +135,31 @@ router.get("/partida/listar/concat",auth,  listarPartidasCONCAT);
 router.post("/partida/existente",auth,  partidaExistente);
 router.post("/partida/alta",auth,  agregarPartida)
 router.put("/partida/editar/:id",auth, editarPartida)
-router.delete("/partida/borrar",auth,  borrarPartida)
+router.delete("/partida/borrar",auth,  borrarPartida) //YA corregido con LOG
 
 router.get("/tipoDeMovimiento/listar",auth, listarTiposDeMovimientos);
 
 router.get("/organismo/listar",auth, listarOrganismos);
 
+//YA corregido con LOG
 router.post("/expediente/alta",auth,agregarExpediente) //YA corregido con LOG
 router.get("/expediente/buscar",auth, buscarExpediente)
 router.get("/expediente/buscarExpedienteComun",auth, buscarExpedienteParaModificarDefinitiva)
 router.get("/expediente/buscarExpedienteParaTransferencias",auth, buscarExpedienteParaModificarPorTransferenciaEntrePartidas)
 
-router.patch("/editarDetalleMovimiento",auth, editarDetalleMovimiento)
+router.patch("/editarDetalleMovimiento",auth, editarDetalleMovimiento) //YA corregido con LOG
 
 router.get("/detPresupuesto/obtenerPorItemYPartida",auth, obtenerDetPresupuestoPorItemYpartida)
 router.get("/detPresupuesto/obtenerSaldoPorDetPresupuestoID",auth, obtenerSaldoPorDetPresupuestoID)
 
-router.post("/movimiento/alta",auth,agregarMovimiento)
-router.post("/movimiento/altaDefinitivaPreventiva",auth,agregarMovimientoDefinitivaPreventiva)
-router.post("/movimiento/altaPorTransferenciaEntrePartidas",auth,agregarMovimientoPorTransferenciaDePartidas)
-router.patch("/movimiento/editarPorTransferenciaEntrePartidas",auth,modificarMovimientoParaTransferenciaEntrePartidas)
+router.post("/movimiento/alta",auth,agregarMovimiento) //YA corregido con LOG
+router.post("/movimiento/altaDefinitivaPreventiva",auth,agregarMovimientoDefinitivaPreventiva) //YA corregido con LOG
+router.post("/movimiento/altaPorTransferenciaEntrePartidas",auth,agregarMovimientoPorTransferenciaDePartidas) //YA corregido con LOG
+router.patch("/movimiento/editarPorTransferenciaEntrePartidas",auth,modificarMovimientoParaTransferenciaEntrePartidas) //YA corregido con LOG
 
-router.patch("/movimiento/editarAltaDeCompromiso",auth,modificarAltaDeCompromiso)
+router.patch("/movimiento/editarAltaDeCompromiso",auth,modificarAltaDeCompromiso) //YA corregido con LOG
 
-router.patch("/movimiento/editarDefinitiva",auth,modificarDefinitiva)
+router.patch("/movimiento/editarDefinitiva",auth,modificarDefinitiva)  //YA corregido con LOG
 
 
 // Configurar el almacenamiento de los archivos
@@ -176,7 +179,7 @@ router.post('/registroCompromiso/alta',auth, upload.fields([
   { name: 'archivoActa', maxCount: 1 },
   { name: 'archivoProtocolo', maxCount: 1 },
   { name: 'archivoFactura', maxCount: 1 },
-]), registroCompromisoAlta); // Llamar al controlador después del middleware de multer
+]), registroCompromisoAlta); //YA corregido con LOG
 
 // router.get('/archivo/:nombreArchivo', obtenerArchivo);
 router.get('/archivo',auth, obtenerArchivo);
@@ -187,6 +190,8 @@ router.get("/movimiento/tipoInstrumento",auth, obtenerTiposDeInstrumentos)
 
 router.get("/anteproyecto/listar",auth, listarAnteproyecto);
 
+
+//FALTA LOG
 router.put("/anteproyecto/editar",auth, actualizarPresupuestoAnteproyecto);
 
 router.put("/credito/editar",auth, actualizarCredito);

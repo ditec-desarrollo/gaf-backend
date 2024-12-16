@@ -676,11 +676,12 @@ console.log(req.body);
                 Item: item[0].item_det,
               });
           }else {
-              const [result] = await connection.execute(
-                  'INSERT INTO item (item_codigo,item_det,anexo_id,finalidad_id,funcion_id,organismo_id) VALUES (?,?,?,?,?,?)',[codigo, descripcion,anexo_id,finalidad_id,funcion_id,organismo_id]
-              ); 
-              // await connection.end();
-              res.status(200).json({ message: "Item creado con éxito" })
+
+              const result = await insertarLOG("INSERT", req.id,  'INSERT INTO item (item_codigo,item_det,anexo_id,finalidad_id,funcion_id,organismo_id) VALUES (?,?,?,?,?,?)', [codigo, descripcion,anexo_id,finalidad_id,funcion_id,organismo_id], "item", connection);
+
+              if(result.affectedRows > 0){
+                res.status(200).json({  message: "Item creado con éxito", id: result.insertId })
+              }
           }
   } catch (error) {
       res.status(500).json({ message: error.message || "Algo salió mal :(" });
@@ -697,11 +698,6 @@ const editarItem = async (req,res) =>{
   try {
       const { codigo, descripcion,anexo_id,finalidad_id,funcion_id,fechaInicio,fechaFin, organismo_id ,item_observaciones} = req.body;
       const itemId = req.params.id;
-console.log(req.body);
-      const sql =
-        "UPDATE item SET item_codigo = ?, item_det = ?, anexo_id = ?, finalidad_id = ?, funcion_id = ?, organismo_id = ?,item_observaciones = ? WHERE item_id = ?";
-      // const values = [codigo, descripcion,anexo_id,finalidad_id,funcion_id,fechaInicio.includes("T")? obtenerFechaEnFormatoDate(fechaInicio): fechaInicio,fechaFin.includes("T")? obtenerFechaEnFormatoDate(fechaFin): fechaFin, itemId];
-      const values = [codigo, descripcion,anexo_id,finalidad_id,funcion_id,organismo_id,item_observaciones, itemId];
   
        connection = await conectar_BD_GAF_MySql();
       const [item] = await connection.execute(
@@ -710,13 +706,20 @@ console.log(req.body);
       );
 
       if (item.length == 0 || item[0].item_id == itemId) {
-        const [result] = await connection.execute(sql, values); 
-        // await connection.end();
-        // El resultado puede contener información sobre la cantidad de filas afectadas, etc.
-        console.log("Filas actualizadas:", result.affectedRows);
-        res
-          .status(200)
-          .json({ message: "item modificado con exito", result });
+
+          const result = await insertarLOG("UPDATE", req.id, "UPDATE item SET item_codigo = ?, item_det = ?, anexo_id = ?, finalidad_id = ?, funcion_id = ?, organismo_id = ?,item_observaciones = ? WHERE item_id = ?", [codigo, descripcion,anexo_id,finalidad_id,funcion_id,organismo_id,item_observaciones, itemId], "item", connection);
+
+          if (result.affectedRows > 0) {
+            res
+            .status(200)
+            .json({ message: "item modificado con exito", result });
+          } else {
+    
+            res
+              .status(400)
+              .json({ message: "item no existente", itemId: itemId });
+          }
+
       } else {
         res
           .status(400)
@@ -738,19 +741,19 @@ console.log(req.body);
 const borrarItem = async (req, res) => {
   const { id } = req.body;
 
-  const sql = "DELETE FROM item WHERE item_id = ?";
-  const values = [id];
   let connection;
 
   try {
      connection = await conectar_BD_GAF_MySql();
-    const [result] = await connection.execute(sql, values); 
-    // await connection.end();
+
+    const result = await insertarLOG("DELETE", req.id, "DELETE FROM item WHERE item_id = ?", [id], "item", connection);
+
     if (result.affectedRows > 0) {
       res.status(200).json({ message: "Item eliminado con éxito"});
     } else {
-      res.status(400).json({ message: "Item no encontrado"});
-    }
+      res.status(400).json({ message: "item no encontrado"});
+    }  
+
   } catch (error) {
     console.error("Error al eliminar el item:", error);
     res.status(500).json({ message: error.message || "Algo salió mal :(" });
@@ -932,18 +935,18 @@ const agregarPartida = async (req, res) => {
 const borrarPartida = async (req, res) => {
   const{ id }= req.body;
 
-  const sql = "DELETE FROM partidas WHERE partida_id = ?";
-  const values = [id];
   let connection;
   try {
      connection = await conectar_BD_GAF_MySql();
-    const [result] = await connection.execute(sql, values); 
-    // await connection.end();
+
+    const result = await insertarLOG("DELETE", req.id, "DELETE FROM partidas WHERE partida_id = ?", [id], "partidas", connection);
+
     if (result.affectedRows > 0) {
-      res.status(200).json({ message: "Partida eliminada con éxito"});
+      res.status(200).json({ message: "partida eliminada con éxito"});
     } else {
-      res.status(400).json({ message: "Partida no encontrada"});
-    }
+      res.status(400).json({ message: "partida no encontrada"});
+    }  
+
   } catch (error) {
     console.error("Error al eliminar la partida:", error);
     res.status(500).json({ message: error.message || "Algo salió mal :(" });
@@ -1081,12 +1084,19 @@ const editarDetalleMovimiento = async (req,res) =>{
     );
 
     if(detPresupuesto.length > 0){
-      const [detPresupuesto] = await connection.query(
-        "UPDATE detmovimiento dm JOIN detpresupuesto dp ON dm.detpresupuesto_id = dp.detpresupuesto_id SET dm.detmovimiento_importe = ?, dp.partida_id = ? WHERE dm.detmovimiento_id = ?",
-        [importe,partida,detmovimiento_id])
 
-        // await connection.end();
-        return res.status(200).json({detPresupuesto})
+        const result = await insertarLOG("UPDATE", req.id, "UPDATE detmovimiento dm JOIN detpresupuesto dp ON dm.detpresupuesto_id = dp.detpresupuesto_id SET dm.detmovimiento_importe = ?, dp.partida_id = ? WHERE dm.detmovimiento_id = ?", [importe,partida,detmovimiento_id], "detmovimiento", connection);
+
+        if (result.affectedRows > 0) {
+          res
+          .status(200)
+          .json({ message: "detmovimiento modificado con éxito", result });
+        } else {
+  
+          res
+            .status(400)
+            .json({ message: "detmovimiento no existente", detmovimiento_id: detmovimiento_id });
+        }
     }
 
     // await connection.end();
@@ -1267,24 +1277,25 @@ const agregarMovimiento = async (req, res) => {
     connection = await conectar_BD_GAF_MySql();
     await connection.beginTransaction();
 
-    const logExpediente = await insertarLOG("INSERT",req.id, "INSERT INTO expediente (expediente_numero,expediente_anio,expediente_causante,expediente_asunto, expediente_fecha,expediente_detalle,item_id) VALUES (?,?,?,?,?,?,?)", [expediente.numero, expediente.anio, expediente.causante, expediente.asunto,  expediente.fecha, expediente.detalle, expediente.item], "expediente", connection);
+    const result = await insertarLOG("INSERT",req.id, "INSERT INTO expediente (expediente_numero,expediente_anio,expediente_causante,expediente_asunto, expediente_fecha,expediente_detalle,item_id) VALUES (?,?,?,?,?,?,?)", [expediente.numero, expediente.anio, expediente.causante, expediente.asunto,  expediente.fecha, expediente.detalle, expediente.item], "expediente", connection);
 
-    if(!logExpediente.ok){
-      throw new Error('Error al insertar logExpediente');
+    if(result.affectedRows == 0){
+      throw new Error('Error al insertar expediente');
     }
 
-    const nuevoExpediente = logExpediente.id;
+    const nuevoExpediente = result.insertId;
 
     const {fecha_actual} =  await obtenerFechaDelServidor()
 
-    const logMovi = await insertarLOG("INSERT",req.id, "INSERT INTO movimiento (movimiento_fecha,expediente_id,tipomovimiento_id,tipoinstrumento_id, instrumento_nro,presupuesto_id,encuadrelegal_id, tipocompra_id) VALUES (?,?,?,?,?,?,?,?)", [fecha_actual,nuevoExpediente, movimiento.tipomovimiento_id, expediente.tipoDeInstrumento, expediente.numeroInstrumento, presupuesto, encuadreLegal, tipoDeCompra], "movimiento", connection);
+    const resultMovi = await insertarLOG("INSERT",req.id, "INSERT INTO movimiento (movimiento_fecha,expediente_id,tipomovimiento_id,tipoinstrumento_id, instrumento_nro,presupuesto_id,encuadrelegal_id, tipocompra_id) VALUES (?,?,?,?,?,?,?,?)", [fecha_actual,nuevoExpediente, movimiento.tipomovimiento_id, expediente.tipoDeInstrumento, expediente.numeroInstrumento, presupuesto, encuadreLegal, tipoDeCompra], "movimiento", connection);
 
-    const movimientoId = logMovi.id;
-    const tablaEspejo = historico("movimiento","movimiento_h","movimiento_id",movimientoId, req.id, "INSERT",connection); //auditoria
-
-    if(!logMovi.ok){
-      throw new Error('Error al insertar logMovi');
+    
+    if(resultMovi.affectedRows == 0){
+      throw new Error('Error al insertar movimiento');
     }
+
+    const movimientoId = resultMovi.insertId;
+    const tablaEspejo = historico("movimiento","movimiento_h","movimiento_id",movimientoId, req.id, "INSERT",connection); //auditoria
 
     if(!tablaEspejo){
       throw new Error('Error al insertar en tabla espejo');
@@ -1292,10 +1303,10 @@ const agregarMovimiento = async (req, res) => {
 
 
     for (const detalle of detMovimiento) {
-    const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detPresupuesto_id,  detalle.importe], "detmovimiento", connection);
+    const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detPresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
 
-    if(!log.ok){
-      throw new Error('Error al insertar log');
+    if(log.affectedRows == 0){
+      throw new Error('Error al insertar detmovimiento');
     }
 
     }
@@ -1303,8 +1314,8 @@ const agregarMovimiento = async (req, res) => {
     for (const item of items) {
       const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detPresupuesto_id], "detmovimiento_nomenclador", connection);
 
-      if(!log.ok){
-        throw new Error('Error al insertar log');
+      if(log.affectedRows == 0){
+        throw new Error('Error al insertar detmovimiento_nomenclador');
       }
 
     }
@@ -1325,13 +1336,9 @@ const agregarMovimiento = async (req, res) => {
     if(connection){
       await connection.rollback();
     }
- 
-    if(error.name == "SequelizeUniqueConstraintError"){
-      res.status(500).json({ message: "El número de expediente ingresado ya existe"});
-    }else{
 
       res.status(500).json({ message: error.message || "Algo salió mal :(" });
-    }
+    
   }finally {
     // Cerrar la conexión a la base de datos
     if (connection) {
@@ -1340,61 +1347,156 @@ const agregarMovimiento = async (req, res) => {
   }
 };
 
+// const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
+//   let transaction;
+//   let connection;
+//   try {
+//     const { movimiento, detMovimiento, expediente, presupuesto, proveedor, items, encuadreLegal, tipoDeCompra, item_id, libramiento_anio } = req.body;
+//     console.log(req.body);
+
+//     transaction = await sequelize.transaction();
+
+//     const movimientoObj = {
+//       movimiento_fecha: movimiento.fecha,
+//       expediente_id: expediente.id,
+//       tipomovimiento_id: movimiento.tipomovimiento_id,
+//       movimiento_id2: movimiento.id,
+//       presupuesto_id: presupuesto,
+//       tipoinstrumento_id: expediente.tipoDeInstrumento ? expediente.tipoDeInstrumento : null,
+//       instrumento_nro: expediente.numeroInstrumento ? expediente.numeroInstrumento : null,
+//       proveedor_id: proveedor.id,
+//       encuadrelegal_id: encuadreLegal,
+//       tipocompra_id: tipoDeCompra
+//     };
+
+//     const nuevoMovimiento = await Movimiento.create(movimientoObj, {
+//       transaction,
+//     });
+
+//     // const movimientoId = result.insertId;
+//     const movimientoId = nuevoMovimiento.movimiento_id;
+
+//     let totalImporte = 0;
+//     for (const detalle of detMovimiento) {
+//       await DetMovimiento.create(
+//         {
+//           movimiento_id: movimientoId,
+//           detpresupuesto_id: detalle.detPresupuesto_id,
+//           detmovimiento_importe: parseFloat(detalle.importe),
+//         },
+//         { transaction }
+//       );
+//       totalImporte += parseFloat(detalle.importe);
+//     }
+
+//     for (const item of items) {
+//       await DetMovimientoNomenclador.create(
+//         {
+//           movimiento_id: movimientoId,
+//           nomenclador_id: item.nomenclador_id,
+//           descripcion: item.descripcion,
+//           cantidad: item.cantidad,
+//           precio: item.precio,
+//           total: item.total,
+//           detPresupuesto_id: item.detPresupuesto_id
+//         },
+//         { transaction }
+//       );
+//     }
+
+//     if (movimiento.tipomovimiento_id == 5) {
+//       connection = await conectar_BD_GAF_MySql();
+
+//       const [result] = await connection.execute(
+//         'SELECT sp_nrolibramiento(?)',
+//         [libramiento_anio]
+//       );
+
+//       const nrolib = result[0]['sp_nrolibramiento(?)'];
+
+//       const [result2] = await connection.execute(
+//         'SELECT sp_nrolibramientoint(?,?)',
+//         [libramiento_anio, item_id]
+//       );
+
+//       const nrolibint = result2[0]['sp_nrolibramientoint(?,?)'];
+//       console.log(totalImporte);
+//       console.log(typeof totalImporte);
+
+//       const [result3] = await connection.execute(
+//         "INSERT INTO libramiento (libramiento_numero,libramiento_numeroint,libramiento_anio, libramiento_fecha, movimiento_id, proveedor_id, expediente_id, item_id, libramiento_importe, libramiento_concepto, libramiento_factura, libramiento_observaciones) VALUES (?,?,?,?,?,?,?,?,?,?, ?, ?)",
+//         [nrolib, nrolibint, libramiento_anio, movimiento.fecha, movimientoId, proveedor.id, expediente.id, item_id, totalImporte, expediente.asunto, movimiento.factura, expediente.observaciones]
+//       );
+
+//     }
+
+//     await transaction.commit();
+
+//     if (movimiento.tipomovimiento_id == 4) {
+//       connection = await conectar_BD_GAF_MySql();
+
+//       const [result] = await connection.execute(
+//         'CALL sp_doccompromiso(?)',
+//         [movimientoId]
+//       );
+//     }
+
+
+
+//     res.status(200).json({ message: "Movimiento creado con éxito", idMovi: movimientoId });
+//   } catch (error) {
+
+//     if (transaction) {
+//       await transaction.rollback();
+//     }
+
+//     res.status(500).json({ message: error.message || "Algo salió mal :(" });
+//   } finally {
+//     // Cerrar la conexión a la base de datos
+//     if (connection) {
+//       await connection.end();
+//     }
+//   }
+// };
+
 const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
-  let transaction;
   let connection;
   try {
     const { movimiento, detMovimiento, expediente, presupuesto, proveedor, items, encuadreLegal, tipoDeCompra, item_id, libramiento_anio } = req.body;
     console.log(req.body);
 
-    transaction = await sequelize.transaction();
+    connection = await conectar_BD_GAF_MySql();
+    await connection.beginTransaction();
 
-    const movimientoObj = {
-      movimiento_fecha: movimiento.fecha,
-      expediente_id: expediente.id,
-      tipomovimiento_id: movimiento.tipomovimiento_id,
-      movimiento_id2: movimiento.id,
-      presupuesto_id: presupuesto,
-      tipoinstrumento_id: expediente.tipoDeInstrumento ? expediente.tipoDeInstrumento : null,
-      instrumento_nro: expediente.numeroInstrumento ? expediente.numeroInstrumento : null,
-      proveedor_id: proveedor.id,
-      encuadrelegal_id: encuadreLegal,
-      tipocompra_id: tipoDeCompra
-    };
+    const resultMovi = await insertarLOG("INSERT",req.id, "INSERT INTO movimiento (movimiento_fecha,expediente_id,tipomovimiento_id,tipoinstrumento_id, instrumento_nro,presupuesto_id,encuadrelegal_id, tipocompra_id, proveedor_id, movimiento_id2) VALUES (?,?,?,?,?,?,?,?,?,?)", [movimiento.fecha,expediente.id, movimiento.tipomovimiento_id, expediente.tipoDeInstrumento ? expediente.tipoDeInstrumento : null, expediente.numeroInstrumento ? expediente.numeroInstrumento : null, presupuesto, encuadreLegal, tipoDeCompra, proveedor.id, movimiento.id], "movimiento", connection);
 
-    const nuevoMovimiento = await Movimiento.create(movimientoObj, {
-      transaction,
-    });
+    
+    if(resultMovi.affectedRows == 0){
+      throw new Error('Error al insertar movimiento');
+    }
 
-    // const movimientoId = result.insertId;
-    const movimientoId = nuevoMovimiento.movimiento_id;
+    const movimientoId = resultMovi.insertId;
 
     let totalImporte = 0;
     for (const detalle of detMovimiento) {
-      await DetMovimiento.create(
-        {
-          movimiento_id: movimientoId,
-          detpresupuesto_id: detalle.detPresupuesto_id,
-          detmovimiento_importe: parseFloat(detalle.importe),
-        },
-        { transaction }
-      );
+    
+      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detPresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
+
+      if(log.affectedRows == 0){
+        throw new Error('Error al insertar detmovimiento');
+      }
+
       totalImporte += parseFloat(detalle.importe);
     }
 
     for (const item of items) {
-      await DetMovimientoNomenclador.create(
-        {
-          movimiento_id: movimientoId,
-          nomenclador_id: item.nomenclador_id,
-          descripcion: item.descripcion,
-          cantidad: item.cantidad,
-          precio: item.precio,
-          total: item.total,
-          detPresupuesto_id: item.detPresupuesto_id
-        },
-        { transaction }
-      );
+
+      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detPresupuesto_id], "detmovimiento_nomenclador", connection);
+
+      if(log.affectedRows == 0){
+        throw new Error('Error al insertar detmovimiento_nomenclador');
+      }
+
     }
 
     if (movimiento.tipomovimiento_id == 5) {
@@ -1413,21 +1515,16 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
       );
 
       const nrolibint = result2[0]['sp_nrolibramientoint(?,?)'];
-      console.log(totalImporte);
-      console.log(typeof totalImporte);
 
-      const [result3] = await connection.execute(
-        "INSERT INTO libramiento (libramiento_numero,libramiento_numeroint,libramiento_anio, libramiento_fecha, movimiento_id, proveedor_id, expediente_id, item_id, libramiento_importe, libramiento_concepto, libramiento_factura, libramiento_observaciones) VALUES (?,?,?,?,?,?,?,?,?,?, ?, ?)",
-        [nrolib, nrolibint, libramiento_anio, movimiento.fecha, movimientoId, proveedor.id, expediente.id, item_id, totalImporte, expediente.asunto, movimiento.factura, expediente.observaciones]
-        // TERMINAR
-      );
+      const libramiento = await insertarLOG("INSERT",req.id, "INSERT INTO libramiento (libramiento_numero,libramiento_numeroint,libramiento_anio, libramiento_fecha, movimiento_id, proveedor_id, expediente_id, item_id, libramiento_importe, libramiento_concepto, libramiento_factura, libramiento_observaciones) VALUES (?,?,?,?,?,?,?,?,?,?, ?, ?)",  [nrolib, nrolibint, libramiento_anio, movimiento.fecha, movimientoId, proveedor.id, expediente.id, item_id, totalImporte, expediente.asunto, movimiento.factura, expediente.observaciones], "libramiento", connection);
+
+      if(libramiento.affectedRows == 0){
+        throw new Error('Error al insertar libramiento');
+      }
 
     }
 
-    await transaction.commit();
-
     if (movimiento.tipomovimiento_id == 4) {
-      connection = await conectar_BD_GAF_MySql();
 
       const [result] = await connection.execute(
         'CALL sp_doccompromiso(?)',
@@ -1435,17 +1532,18 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
       );
     }
 
-
+    await connection.commit();
 
     res.status(200).json({ message: "Movimiento creado con éxito", idMovi: movimientoId });
-  } catch (error) {
 
-    if (transaction) {
-      await transaction.rollback();
+  } catch (error) {
+    if(connection){
+      await connection.rollback();
     }
 
-    res.status(500).json({ message: error.message || "Algo salió mal :(" });
-  } finally {
+      res.status(500).json({ message: error.message || "Algo salió mal :(" });
+    
+  }finally {
     // Cerrar la conexión a la base de datos
     if (connection) {
       await connection.end();
@@ -1453,70 +1551,159 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
   }
 };
 
+// const agregarMovimientoPorTransferenciaDePartidas = async (req, res) => {
+//   let transaction;
+//   try {
+//     const { movimiento, detMovimiento,expediente, presupuesto } = req.body;
+
+//     transaction = await sequelize.transaction();
+
+//     let expedienteObj = {
+//       expediente_anio:expediente.anio,
+//       expediente_fecha:expediente.fecha,
+//       expediente_asunto:expediente.asunto,
+//       expediente_causante:expediente.causante,
+//       expediente_numero: expediente.numero,
+//       expediente_detalle: expediente.detalle,
+//       item_id:expediente.itemCausante
+//     }
+//     const nuevoExpediente = await Expediente.create(expedienteObj,{
+//       transaction
+//     });
+
+//     const movimientoObj = {
+//       movimiento_fecha: movimiento.fecha,
+//       expediente_id: nuevoExpediente.expediente_id,
+//       tipomovimiento_id: movimiento.tipomovimiento_id,
+//       tipoinstrumento_id: expediente.tipoDeInstrumento,
+//       instrumento_nro: expediente.numeroInstrumento,
+//       presupuesto_id: presupuesto
+//     };
+
+//     const nuevoMovimiento = await Movimiento.create(movimientoObj, {
+//       transaction,
+//     });
+
+//     // const movimientoId = result.insertId;
+//     const movimientoId = nuevoMovimiento.movimiento_id;
+
+//     for (const detalle of detMovimiento) {
+//       await DetMovimiento.create(
+//         {
+//           movimiento_id: movimientoId,
+//           detpresupuesto_id: detalle.detPresupuesto_id,
+//           detpresupuesto_id2: detalle.detPresupuesto_id_destino,
+//           detmovimiento_importe: detalle.importe,
+//         },
+//         { transaction }
+//       );
+//     }
+//     await transaction.commit();
+
+//     res.status(200).json({ message: "Movimiento creado con éxito" });
+//   } catch (error) {
+
+//     if (transaction) {
+//       await transaction.rollback();
+//     }
+ 
+//     if(error.name == "SequelizeUniqueConstraintError"){
+//       res.status(500).json({ message: "El número de expediente ingresado ya existe"});
+//     }else{
+
+//       res.status(500).json({ message: error.message || "Algo salió mal :(" });
+//     }
+//   }
+// };
+
 const agregarMovimientoPorTransferenciaDePartidas = async (req, res) => {
-  let transaction;
+  let connection;
   try {
     const { movimiento, detMovimiento,expediente, presupuesto } = req.body;
 
-    transaction = await sequelize.transaction();
+    connection = await conectar_BD_GAF_MySql();
+    await connection.beginTransaction();
 
-    let expedienteObj = {
-      expediente_anio:expediente.anio,
-      expediente_fecha:expediente.fecha,
-      expediente_asunto:expediente.asunto,
-      expediente_causante:expediente.causante,
-      expediente_numero: expediente.numero,
-      expediente_detalle: expediente.detalle,
-      item_id:expediente.itemCausante
+    const nuevoExpediente = await insertarLOG("INSERT",req.id, "INSERT INTO expediente (expediente_numero,expediente_anio,expediente_causante,expediente_asunto, expediente_fecha,expediente_detalle,item_id) VALUES (?,?,?,?,?,?,?)", [expediente.numero, expediente.anio, expediente.causante, expediente.asunto,  expediente.fecha, expediente.detalle, expediente.itemCausante], "expediente", connection);
+
+    if(nuevoExpediente.affectedRows == 0){
+      throw new Error('Error al insertar expediente');
     }
-    const nuevoExpediente = await Expediente.create(expedienteObj,{
-      transaction
-    });
 
-    const movimientoObj = {
-      movimiento_fecha: movimiento.fecha,
-      expediente_id: nuevoExpediente.expediente_id,
-      tipomovimiento_id: movimiento.tipomovimiento_id,
-      tipoinstrumento_id: expediente.tipoDeInstrumento,
-      instrumento_nro: expediente.numeroInstrumento,
-      presupuesto_id: presupuesto
-    };
+    
+    const nuevoMovimiento = await insertarLOG("INSERT",req.id, "INSERT INTO movimiento (movimiento_fecha,expediente_id,tipomovimiento_id,tipoinstrumento_id, instrumento_nro,presupuesto_id) VALUES (?,?,?,?,?,?)", [ movimiento.fecha,nuevoExpediente.insertId, movimiento.tipomovimiento_id, expediente.tipoDeInstrumento, expediente.numeroInstrumento, presupuesto], "movimiento", connection);
+    
+    
+    if(nuevoMovimiento.affectedRows == 0){
+      throw new Error('Error al insertar movimiento');
+    }
 
-    const nuevoMovimiento = await Movimiento.create(movimientoObj, {
-      transaction,
-    });
-
-    // const movimientoId = result.insertId;
-    const movimientoId = nuevoMovimiento.movimiento_id;
+    const movimientoId = nuevoMovimiento.insertId;
 
     for (const detalle of detMovimiento) {
-      await DetMovimiento.create(
-        {
-          movimiento_id: movimientoId,
-          detpresupuesto_id: detalle.detPresupuesto_id,
-          detpresupuesto_id2: detalle.detPresupuesto_id_destino,
-          detmovimiento_importe: detalle.importe,
-        },
-        { transaction }
-      );
+
+      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detpresupuesto_id2,detmovimiento_importe) VALUES (?,?,?,?)",  [movimientoId, detalle.detPresupuesto_id,detalle.detPresupuesto_id_destino, parseFloat(detalle.importe)], "detmovimiento", connection);
+
+      if(log.affectedRows == 0){
+        throw new Error('Error al insertar detmovimiento');
+      }
+
     }
-    await transaction.commit();
+    await connection.commit();
 
     res.status(200).json({ message: "Movimiento creado con éxito" });
   } catch (error) {
 
-    if (transaction) {
-      await transaction.rollback();
+    if (connection) {
+      await connection.rollback();
     }
- 
-    if(error.name == "SequelizeUniqueConstraintError"){
-      res.status(500).json({ message: "El número de expediente ingresado ya existe"});
-    }else{
 
       res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  }finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
     }
   }
 };
+
+// const modificarMovimientoParaTransferenciaEntrePartidas = async (req, res) => {
+//   const {  movimiento, detMovimiento } = req.body;
+
+//   let connection;
+//   try {
+//      connection = await conectar_BD_GAF_MySql();
+//     await connection.beginTransaction();
+//       // Paso 1: Eliminar los detalles de movimiento existentes para el movimiento
+//       await connection.query('DELETE FROM detmovimiento WHERE detmovimiento.movimiento_id = ?', [movimiento.id]);
+//     console.log(detMovimiento);
+//     console.log(movimiento);
+    
+    
+//       // Paso 2: Insertar los nuevos detalles de movimiento
+//       const insertPromises = detMovimiento.map(detalle => {
+//           return connection.query('INSERT INTO detmovimiento (movimiento_id, detpresupuesto_id, detmovimiento_importe, detpresupuesto_id2) VALUES (?, ?, ?, ?)', 
+//           [movimiento.id,detalle.detPresupuesto_id,detalle.importe, detalle.detPresupuesto_id_destino]);
+//       });
+
+  
+//       await connection.query("UPDATE movimiento SET tipoInstrumento_id = ? , instrumento_nro = ? WHERE movimiento_id = ?",[movimiento.tipoinstrumento_id, movimiento.instrumento_nro, movimiento.id])
+
+//       await Promise.all(insertPromises);
+
+//       await connection.commit();
+//       res.status(200).json({ message: 'Movimiento actualizado correctamente' });
+//   } catch (error) {
+//     console.log(error);
+//       await connection.rollback();
+//       res.status(500).json({ message: 'Error al actualizar los detalles de movimiento', error });
+//   } finally {
+//     // Cerrar la conexión a la base de datos
+//     if (connection) {
+//       await connection.end();
+//     }
+//   }
+// };
 
 const modificarMovimientoParaTransferenciaEntrePartidas = async (req, res) => {
   const {  movimiento, detMovimiento } = req.body;
@@ -1526,27 +1713,32 @@ const modificarMovimientoParaTransferenciaEntrePartidas = async (req, res) => {
      connection = await conectar_BD_GAF_MySql();
     await connection.beginTransaction();
       // Paso 1: Eliminar los detalles de movimiento existentes para el movimiento
-      await connection.query('DELETE FROM detmovimiento WHERE detmovimiento.movimiento_id = ?', [movimiento.id]);
-    console.log(detMovimiento);
-    console.log(movimiento);
-    
-    
-      // Paso 2: Insertar los nuevos detalles de movimiento
-      const insertPromises = detMovimiento.map(detalle => {
-          return connection.query('INSERT INTO detmovimiento (movimiento_id, detpresupuesto_id, detmovimiento_importe, detpresupuesto_id2) VALUES (?, ?, ?, ?)', 
-          [movimiento.id,detalle.detPresupuesto_id,detalle.importe, detalle.detPresupuesto_id_destino]);
-      });
 
+      const result = await insertarLOG("DELETE", req.id, 'DELETE FROM detmovimiento WHERE detmovimiento.movimiento_id = ?', [movimiento.id], "detmovimiento", connection);
+
+      if(result.affectedRows == 0){
+        throw new Error('Error al eliminar detmovimiento');
+      }
+    
   
-      await connection.query("UPDATE movimiento SET tipoInstrumento_id = ? , instrumento_nro = ? WHERE movimiento_id = ?",[movimiento.tipoinstrumento_id, movimiento.instrumento_nro, movimiento.id])
+      const insertPromises = detMovimiento.map(detalle =>  {
+        return insertarLOG("INSERT",req.id, 'INSERT INTO detmovimiento (movimiento_id, detpresupuesto_id, detmovimiento_importe, detpresupuesto_id2) VALUES (?, ?, ?, ?)', [movimiento.id,detalle.detPresupuesto_id,detalle.importe, detalle.detPresupuesto_id_destino], "detmovimiento", connection);
+    });
+
+      const resultUpdate = await insertarLOG("UPDATE", req.id, "UPDATE movimiento SET tipoInstrumento_id = ? , instrumento_nro = ? WHERE movimiento_id = ?", [movimiento.tipoinstrumento_id, movimiento.instrumento_nro, movimiento.id], "movimiento", connection);
+
+      if(resultUpdate.affectedRows == 0){
+        throw new Error('Error al actualizar movimiento');
+      }
 
       await Promise.all(insertPromises);
 
       await connection.commit();
       res.status(200).json({ message: 'Movimiento actualizado correctamente' });
   } catch (error) {
-    console.log(error);
-      await connection.rollback();
+   if(connection){
+     await connection.rollback();
+   }
       res.status(500).json({ message: 'Error al actualizar los detalles de movimiento', error });
   } finally {
     // Cerrar la conexión a la base de datos
@@ -1700,7 +1892,13 @@ let connection;
 try {
    connection = await conectar_BD_GAF_MySql();
    
-    await connection.query("UPDATE movimiento SET proveedor_id = ?, encuadrelegal_id = ?, tipocompra_id = ? WHERE movimiento_id = ?",[proveedor.id,encuadreLegal,tipoDeCompra, movimiento.id])
+
+    const resultUpdate = await insertarLOG("UPDATE", req.id, "UPDATE movimiento SET proveedor_id = ?, encuadrelegal_id = ?, tipocompra_id = ? WHERE movimiento_id = ?", [proveedor.id,encuadreLegal,tipoDeCompra, movimiento.id], "movimiento", connection);
+
+    if(resultUpdate.affectedRows == 0){
+      throw new Error('Error al actualizar movimiento');
+    }
+
   
     res.status(200).json({ message: 'Movimiento actualizado correctamente', idMovi: movimiento.id });
 
@@ -1722,8 +1920,12 @@ const modificarDefinitiva= async (req,res) => {
   let connection;
   try {
      connection = await conectar_BD_GAF_MySql();
-     
-      await connection.query("UPDATE movimiento SET instrumento_nro = ? WHERE movimiento_id = ?",[numeroInstrumento, idMovimiento])
+
+      const resultUpdate = await insertarLOG("UPDATE", req.id, "UPDATE movimiento SET instrumento_nro = ? WHERE movimiento_id = ?", [numeroInstrumento, idMovimiento], "movimiento", connection);
+
+      if(resultUpdate.affectedRows == 0){
+        throw new Error('Error al actualizar movimiento');
+      }
     
       res.status(200).json({ message: 'Movimiento actualizado correctamente', idMovi:idMovimiento });
   
@@ -1741,8 +1943,12 @@ const modificarDefinitiva= async (req,res) => {
 const modificarMovimientoAltaDeCompromiso= async (expediente, tipoDeInstrumento, movimiento, connection) => {
 
   try {
-   
-    await connection.query("UPDATE movimiento SET tipoinstrumento_id = ?, instrumento_nro = ?, movimiento_protocolo = ?, movimiento_actadm = ?,  movimiento_factura = ? WHERE movimiento_id = ?",[tipoDeInstrumento,expediente.numeroInstrumento, expediente.numeroProtocolo, expediente.numeroActa, expediente.numeroFactura, movimiento.id])
+
+    const resultUpdate = await insertarLOG("UPDATE", req.id, "UPDATE movimiento SET tipoinstrumento_id = ?, instrumento_nro = ?, movimiento_protocolo = ?, movimiento_actadm = ?,  movimiento_factura = ? WHERE movimiento_id = ?", [tipoDeInstrumento,expediente.numeroInstrumento, expediente.numeroProtocolo, expediente.numeroActa, expediente.numeroFactura, movimiento.id], "movimiento", connection);
+
+    if(resultUpdate.affectedRows == 0){
+      throw new Error('Error al actualizar movimiento');
+    }
   
   } catch (error) {
       console.log(error);
