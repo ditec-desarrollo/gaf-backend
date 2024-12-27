@@ -34,6 +34,8 @@ async function historico(tablaOrigen, tablaDestino, campoWhere , valorCampoWhere
     } catch (error) {
 
           throw new Error(error.message);
+        // console.error(`Error en la función historico: ${error.message}`);
+        // return false; // Indica que la operación falló, pero no rompe el backend
         
     }
 }

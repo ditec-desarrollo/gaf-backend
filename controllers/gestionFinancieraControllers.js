@@ -1295,10 +1295,10 @@ const agregarMovimiento = async (req, res) => {
     }
 
     const movimientoId = resultMovi.insertId;
-    const tablaEspejo = historico("movimiento","movimiento_h","movimiento_id",movimientoId, req.id, "INSERT",connection); //auditoria
+    const tablaEspejo = await historico("movimiento","movimiento_h","movimiento_id",movimientoId, req.id, "INSERT",connection); //auditoria
 
     if(!tablaEspejo){
-      throw new Error('Error al insertar en tabla espejo');
+      throw new Error('Error al insertar histórico');
     }
 
 
@@ -1499,7 +1499,7 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
 
     }
 
-    if (movimiento.tipomovimiento_id == 5) {
+    if (movimiento.tipomovimiento_id == 6) {
       connection = await conectar_BD_GAF_MySql();
 
       const [result] = await connection.execute(
@@ -2124,7 +2124,7 @@ const buscarExpediente = async (req, res) => {
 
     // Primera consulta: Obtener los detalles del expediente
     const query1 = `
-    SELECT e.*, m.presupuesto_id,m.movimiento_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,m.encuadrelegal_id,m.movimiento_protocolo, m.movimiento_actadm, m.movimiento_factura, prov.*, d.detmovimiento_id,d.detpresupuesto_id,d.detmovimiento_importe, dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones, i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id
+    SELECT e.*, m.presupuesto_id,m.movimiento_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,m.encuadrelegal_id, prov.*, d.detmovimiento_id,d.detpresupuesto_id,d.detmovimiento_importe, dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones, i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id
     FROM expediente AS e
     LEFT JOIN movimiento AS m ON e.expediente_id = m.expediente_id
     LEFT JOIN encuadrelegal AS el ON m.encuadrelegal_id = el.encuadrelegal_id 
@@ -2137,7 +2137,7 @@ const buscarExpediente = async (req, res) => {
     AND m.tipomovimiento_id = ? 
     AND e.expediente_anio = ? 
 `;
-    const [result1] = await connection.execute(query1, [numero, tipomovimiento_id == 5 || tipomovimiento_id == 6 ? 4 : tipomovimiento_id == 4 ? 1 : tipomovimiento_id, anio]);
+    const [result1] = await connection.execute(query1, [numero, tipomovimiento_id == 6 ? 4 : tipomovimiento_id == 4 ? 1 : tipomovimiento_id, anio]);
     console.log(result1);
 
     // Obtener los `movimiento_id` para la segunda consulta
@@ -2170,10 +2170,10 @@ const buscarExpediente = async (req, res) => {
       if (response.primeraConsulta.length > 0 && response.segundaConsulta.length > 0 && tipomovimiento_id == 6) {
         res.status(200).json(response.primeraConsulta);
       }
-      else if (response.primeraConsulta.length > 0 && response.segundaConsulta.length == 0 && tipomovimiento_id == 5 && response.primeraConsulta[0]?.tipoinstrumento_id == 0) {
+      else if (response.primeraConsulta.length > 0 && response.segundaConsulta.length == 0 && tipomovimiento_id == 6 && response.primeraConsulta[0]?.tipoinstrumento_id == 0) {
         throw new Error("Le falta registro de compromiso")
       }
-      else if (response.primeraConsulta.length > 0 && response.segundaConsulta.length > 0 && tipomovimiento_id == 5) {
+      else if (response.primeraConsulta.length > 0 && response.segundaConsulta.length > 0 && tipomovimiento_id == 6) {
         throw new Error("Ya tiene compromiso")
       } else if (response.primeraConsulta.length > 0 && response.segundaConsulta.length > 0 && tipomovimiento_id == 4) {
         throw new Error("Ya tiene reserva")
@@ -3169,6 +3169,7 @@ const obtenerNomencladores = async (req, res) => {
              p.partida_codigo, p.partida_det
       FROM nomenclador n
       LEFT JOIN partidas p ON n.partida_id = p.partida_id
+      ORDER BY n.nomenclador_det ASC
     `;
 
     // Ejecutar la consulta
