@@ -89,7 +89,10 @@ const {
     modificarAltaDeCompromiso,
     modificarDefinitiva,
     obtenerLibramiento,
-    buscarProveedorPorCuit
+    buscarProveedorPorCuit,
+    registroCompromisoAltaSinArchivo,
+    agregarMovimientoCompromiso,
+    agregarMovimientoDefinitivaPreventivaSinArchivo
   } = require("../controllers/gestionFinancieraControllers");
 
 const router = Router();
@@ -153,7 +156,7 @@ router.get("/detPresupuesto/obtenerPorItemYPartida",auth, obtenerDetPresupuestoP
 router.get("/detPresupuesto/obtenerSaldoPorDetPresupuestoID",auth, obtenerSaldoPorDetPresupuestoID)
 
 router.post("/movimiento/alta",auth,agregarMovimiento) //YA corregido con LOG
-router.post("/movimiento/altaDefinitivaPreventiva",auth,agregarMovimientoDefinitivaPreventiva) //YA corregido con LOG
+router.post("/movimiento/altaDefinitivaPreventivaSinArchivo",auth,agregarMovimientoDefinitivaPreventivaSinArchivo) //YA corregido con LOG
 router.post("/movimiento/altaPorTransferenciaEntrePartidas",auth,agregarMovimientoPorTransferenciaDePartidas) //YA corregido con LOG
 router.patch("/movimiento/editarPorTransferenciaEntrePartidas",auth,modificarMovimientoParaTransferenciaEntrePartidas) //YA corregido con LOG
 
@@ -175,11 +178,21 @@ const storage = multer.diskStorage({
 // Inicializar multer
 const upload = multer({ storage: storage });
 
+// router.post('/registroCompromiso/alta',auth, upload.fields([
+//   { name: 'archivoActa', maxCount: 1 },
+//   { name: 'archivoProtocolo', maxCount: 1 },
+//   { name: 'archivoFactura', maxCount: 1 },
+// ]), registroCompromisoAlta);
+
 router.post('/registroCompromiso/alta',auth, upload.fields([
-  { name: 'archivoActa', maxCount: 1 },
-  { name: 'archivoProtocolo', maxCount: 1 },
-  { name: 'archivoFactura', maxCount: 1 },
-]), registroCompromisoAlta); //YA corregido con LOG
+  { name: 'documentacion', maxCount: 1 }
+]), registroCompromisoAlta);
+
+router.post("/registroCompromisoSinArchivo/alta",auth,agregarMovimientoCompromiso)  //YA corregido con LOG
+
+router.post('/movimiento/altaDefinitivaPreventiva',auth, upload.fields([
+  { name: 'documentacion', maxCount: 1 }
+]), agregarMovimientoDefinitivaPreventiva);
 
 // router.get('/archivo/:nombreArchivo', obtenerArchivo);
 router.get('/archivo',auth, obtenerArchivo);
