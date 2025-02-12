@@ -72,10 +72,10 @@ const conectarSMTPatrimonio = async () => {
 const conectar_BD_GAF_MySql = async () => {
     try {
         const connection = await mysql.createConnection({
-            host: process.env.HOST_CIU_DIGITAL,
-            user: process.env.USER_CIU_DIGITAL,
-            port: process.env.PORT_CIU_DIGITAL,
-            password: process.env.PASSWORD_CIU_DIGITAL,
+            host: process.env.HOST_GAF,
+            user: process.env.USER_GAF,
+            port: process.env.PORT_GAF,
+            password: process.env.PASSWORD_GAF,
             database: process.env.DB_GAF,
         });
         return connection
