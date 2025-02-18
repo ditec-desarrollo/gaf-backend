@@ -1977,7 +1977,7 @@ const obtenerPresupuestosParaMovimientoPresupuestario = async (req, res) => {
 
     connection = await conectar_BD_GAF_MySql();
 
-    let sqlQuery = `SELECT * FROM presupuesto WHERE presupuesto.presupuesto_fechaaprobado IS NOT NULL AND presupuesto.presupuesto_finalizado IS NULL`;
+    let sqlQuery = `SELECT * FROM presupuesto WHERE presupuesto.presupuesto_ejecucion IS NOT NULL AND presupuesto.presupuesto_finalizado IS NULL`;
     const [presupuestos] = await connection.execute(sqlQuery);
     res.status(200).json({ presupuestos });
   } catch (error) {
