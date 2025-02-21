@@ -29,16 +29,16 @@ app.use('/ciudadanoDigital',ciudadanoDigitalRoutes)
 app.use('/gestionFinanciera', gestionFinancieraRoutes)
 
 
-const options = {
-    key: fs.readFileSync('/opt/psa/var/certificates/scfx0vp99'),
-    cert: fs.readFileSync('/opt/psa/var/certificates/scfx0vp99'),
-    //ca: fs.readFileSync('/opt/psa/var/certificates/scfqdiDyQ') // si tienes un archivo CA bundle
-  };
+// const options = {
+//     key: fs.readFileSync('/opt/psa/var/certificates/scfx0vp99'),
+//     cert: fs.readFileSync('/opt/psa/var/certificates/scfx0vp99'),
+//     //ca: fs.readFileSync('/opt/psa/var/certificates/scfqdiDyQ') // si tienes un archivo CA bundle
+//   };
   
-  https.createServer(options, app).listen(7774, () => {
-    console.log(`server listening on port 7774`);
-  });
+//   https.createServer(options, app).listen(7774, () => {
+//     console.log(`server listening on port 7774`);
+//   });
 
-  // app.listen(3050, () => {
-  //   console.log(`server listening on port 3050`);
-  // });
+  app.listen(3050, () => {
+    console.log(`server listening on port 3050`);
+  });

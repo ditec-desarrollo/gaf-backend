@@ -92,7 +92,8 @@ const {
     buscarProveedorPorCuit,
     registroCompromisoAltaSinArchivo,
     agregarMovimientoCompromiso,
-    agregarMovimientoDefinitivaPreventivaSinArchivo
+    agregarMovimientoDefinitivaPreventivaSinArchivo,
+    chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva
   } = require("../controllers/gestionFinancieraControllers");
 
 const router = Router();
@@ -147,6 +148,7 @@ router.get("/organismo/listar",auth, listarOrganismos);
 //YA corregido con LOG
 router.post("/expediente/alta",auth,agregarExpediente) //YA corregido con LOG
 router.get("/expediente/buscar",auth, buscarExpediente)
+router.get("/expediente/verificarExistenciaExpedienteEnReserva",auth, chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva)
 router.get("/expediente/buscarExpedienteComun",auth, buscarExpedienteParaModificarDefinitiva)
 router.get("/expediente/buscarExpedienteParaTransferencias",auth, buscarExpedienteParaModificarPorTransferenciaEntrePartidas)
 
