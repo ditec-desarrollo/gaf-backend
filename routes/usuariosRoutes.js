@@ -2,38 +2,22 @@ const { Router } = require("express");
 const auth = require("../middlewares/auth");
 const validateFields = require("../middlewares/validateFields");
 const { check } = require("express-validator");
-const { login, getAuthStatus, obtenerUsuarios, editarUsuario, borrarUsuario, agregarUsuarioMYSQL, validarUsuarioMYSQL, obtenerCiudadanoPorEmailMYSQL, obtenerCiudadanoPorDNIMYSQL, editarUsuarioCompleto, enviarEmailValidacion } = require("../controllers/usuariosControllers");
-const verifyRole = require("../middlewares/verifyRole")
+
+const {
+  getAuthStatus,
+  obtenerUsuarios,
+  obtenerPermisos,
+  obtenerOpcionesHabilitadas,
+} = require("../controllers/usuariosControllers");
+
+const verifyRole = require("../middlewares/verifyRole");
 
 const router = Router();
 
-router.post(
-    "/login",
-    [
-        check("dni", "El DNI de usuario no cumple con los requisitos").not().isEmpty().isInt().isLength({ min: 7, max: 8 }),
-        check("password", "La contraseña no cumple con los requisitos").isLength({ min: 4, max: 30 }),
-        validateFields,
-    ],
-    login
-);
-
-// router.post("/alta", auth, verifyRole, agregarUsuario);
 router.get("/authStatus", auth, getAuthStatus);
-router.get("/listar/:id?",auth,verifyRole,obtenerUsuarios)
-// router.put("/:id",auth,verifyRole,editarUsuario)
-router.delete("/",[auth,verifyRole, check("id").not().isEmpty(), validateFields,],borrarUsuario)
+router.get("/listar/:id?", auth, verifyRole, obtenerUsuarios);
+router.get("/permisos/:idTusuario/:idPersona", auth, obtenerPermisos);
+router.get("/opciones", auth, obtenerOpcionesHabilitadas);
 
-router.get('/dni/:dni', obtenerCiudadanoPorDNIMYSQL);
-router.get('/email/:email', obtenerCiudadanoPorEmailMYSQL);  
-router.put("/validar", validarUsuarioMYSQL)
-router.put("/editar", editarUsuarioCompleto)
-router.post("/registro",
-// [
-//     check("nombre_ciudadano","el nombre es obligatorio").not().isEmpty(),
-//     check("clave_ciudadano","el password es obligatorio").not().isEmpty(),
-   
-// ],
-agregarUsuarioMYSQL)
-router.post("/email", enviarEmailValidacion)
 
 module.exports = router;
