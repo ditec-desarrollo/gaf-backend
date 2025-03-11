@@ -94,7 +94,8 @@ const {
     agregarMovimientoCompromiso,
     agregarMovimientoDefinitivaPreventivaSinArchivo,
     chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva,
-    obtenerNomencladoresPorPartida
+    obtenerNomencladoresPorPartida,
+    transferirEstructuraItem
   } = require("../controllers/gestionFinancieraControllers");
 
 const router = Router();
@@ -125,7 +126,7 @@ router.delete("/ejercicio/borrar",auth,  borrarEjercicio)
 
 //YA corregido con LOG
 router.get("/item/listar",auth,  listarItems);
-router.get("/item/listarSinPartidas",auth,  listarItemsSinPartidas);
+router.get("/item/listarSinPartidas/:presupuesto_id",auth,  listarItemsSinPartidas);
 router.post("/item/listar/:cuil",auth,  listarItemsFiltrado);
 router.post("/item/alta",auth,  agregarItem) //YA corregido con LOG
 router.put("/item/editar/:id",auth, editarItem) //YA corregido con LOG
@@ -224,6 +225,7 @@ router.put("/acumular",auth, acumular);
 router.post('/perfil/:cuil',auth, obtenerPerfilPorCuil);
 
 router.post('/anteproyecto/crearEstructura',auth, crearEstructuraItem);
+router.post('/anteproyecto/transferirEstructura',auth, transferirEstructuraItem);
 
 
 router.get("/proveedores/listar",auth, obtenerProveedores);

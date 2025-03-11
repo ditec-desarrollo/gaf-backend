@@ -603,31 +603,48 @@ const listarItems = async (req, res) => {
 
 const listarItemsSinPartidas = async (req, res) => {
   let connection;
+  const { presupuesto_id } = req.params; // Desestructurar el ID del presupuesto
+
   try {
-     connection = await conectar_BD_GAF_MySql();
-      // Verifica si hay un término de búsqueda en los parámetros de la solicitud
-      const searchTerm = req.query.searchTerm || '';
+    connection = await conectar_BD_GAF_MySql();
+    
+    // Verifica si hay un término de búsqueda en los parámetros de la solicitud
+    const searchTerm = req.query.searchTerm || '';
 
-      let sqlQuery =  'SELECT item_codigo,item_det,item_id FROM item WHERE (Select COUNT(partida_id) FROM detpresupuesto WHERE detpresupuesto.presupuesto_id=1 and detpresupuesto.item_id=item.item_id)=0'
+    // Consulta base
+    let sqlQuery = `
+      SELECT item_codigo, item_det, item_id 
+      FROM item 
+      WHERE (SELECT COUNT(partida_id) 
+             FROM detpresupuesto 
+             WHERE detpresupuesto.presupuesto_id = ? 
+               AND detpresupuesto.item_id = item.item_id) = 0
+    `;
 
-      // Agrega la cláusula WHERE para la búsqueda si hay un término de búsqueda
-      if (searchTerm) {
-          
-          sqlQuery += ' WHERE LOWER(item_codigo) LIKE LOWER(?) OR LOWER(item_det) LIKE LOWER(?)';
-      } 
-      const [items] = await connection.execute(sqlQuery, [`%${searchTerm}%`, `%${searchTerm}%`]);
-      // await connection.end();
-      res.status(200).json({ items });
+    // Si hay búsqueda, agregar condición
+    const params = [presupuesto_id];
+    if (searchTerm) {
+      sqlQuery += ` AND (LOWER(item_codigo) LIKE LOWER(?) OR LOWER(item_det) LIKE LOWER(?))`;
+      params.push(`%${searchTerm}%`, `%${searchTerm}%`);
+    }
+
+    // Ejecutar la consulta
+    const [items] = await connection.execute(sqlQuery, params);
+
+    // Enviar la respuesta
+    res.status(200).json({ items });
+
   } catch (error) {
     console.log(error);
-      res.status(500).json({ message: error.message || "Algo salió mal :(" });
-  }finally {
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
     // Cerrar la conexión a la base de datos
     if (connection) {
       await connection.end();
     }
   }
 };
+
 
 const listarItemsFiltrado = async (req, res) => {
   const cuil=req.params.cuil
@@ -3199,6 +3216,34 @@ const crearEstructuraItem = async (req,res)=>{
   }
 }
 
+const transferirEstructuraItem = async (req, res) => {
+  let connection;
+  try {
+    const { presupuesto_id, itemorigen_id, itemdestino_id } = req.body;
+
+    if (!presupuesto_id || !itemorigen_id || !itemdestino_id) {
+      return res.status(400).send({ mge: 'Faltan parámetros', ok: false });
+    }
+
+    connection = await conectar_BD_GAF_MySql();
+    let sqlQuery = `SELECT sp_transferirestructuracompleta(?, ?, ?)`;
+    const [result] = await connection.execute(sqlQuery, [presupuesto_id, itemorigen_id, itemdestino_id]);
+
+    if (result && result.length > 0 && result[0][`sp_transferirestructuracompleta(?, ?, ?)`] === 1) {
+      res.status(200).send({ mge: 'Operación exitosa', ok: true });
+    } else {
+      res.status(200).send({ mge: 'El item destino no tiene estructura creada', ok: false });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Error en el servidor');
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
+
 
 /////////////////////// PROVEDORES ////////////////////////////////
 
@@ -4059,7 +4104,9 @@ module.exports = {
   obtenerNomencladores,
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
  obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem,
- obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo,modificarAltaDeCompromiso, modificarDefinitiva, obtenerLibramiento,buscarProveedorPorCuit, registroCompromisoAltaSinArchivo, agregarMovimientoCompromiso, agregarMovimientoDefinitivaPreventivaSinArchivo, chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva, obtenerNomencladoresPorPartida
+
+ obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo,modificarAltaDeCompromiso, modificarDefinitiva, obtenerLibramiento,buscarProveedorPorCuit, registroCompromisoAltaSinArchivo, agregarMovimientoCompromiso, agregarMovimientoDefinitivaPreventivaSinArchivo, chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva, obtenerNomencladoresPorPartida, transferirEstructuraItem
+
 };
 
 
