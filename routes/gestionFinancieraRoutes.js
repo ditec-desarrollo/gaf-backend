@@ -93,7 +93,8 @@ const {
     registroCompromisoAltaSinArchivo,
     agregarMovimientoCompromiso,
     agregarMovimientoDefinitivaPreventivaSinArchivo,
-    chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva
+    chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva,
+    obtenerNomencladoresPorPartida
   } = require("../controllers/gestionFinancieraControllers");
 
 const router = Router();
@@ -239,6 +240,7 @@ router.get("/rubros/listar",auth, obtenerRubros);
 router.post("/rubros/agregar",auth, agregarRubro);
 
 router.get("/nomencladores/listar",auth, obtenerNomencladores);
+router.get("/nomencladores/listarPorPartida",auth, obtenerNomencladoresPorPartida);
 router.put("/nomencladores/editar",auth, editarNomenclador);
 router.post("/nomencladores/agregar",auth, agregarNomenclador);
 router.delete("/nomencladores/eliminar/:idEliminar",auth, eliminarNomenclador);

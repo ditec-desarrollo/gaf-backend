@@ -579,12 +579,13 @@ const listarItems = async (req, res) => {
       'LEFT JOIN anexo ON item.anexo_id = anexo.anexo_id ' +
       'LEFT JOIN finalidad ON item.finalidad_id = finalidad.finalidad_id ' +
       'LEFT JOIN funcion ON item.funcion_id = funcion.funcion_id ' +
-      'LEFT JOIN organismo ON item.organismo_id = organismo.organismo_id'
+      'LEFT JOIN organismo ON item.organismo_id = organismo.organismo_id' +
+      ' WHERE item.item_fechafin IS NULL'
 
       // Agrega la cláusula WHERE para la búsqueda si hay un término de búsqueda
       if (searchTerm) {
           
-          sqlQuery += ' WHERE LOWER(item_codigo) LIKE LOWER(?) OR LOWER(item_det) LIKE LOWER(?)';
+          sqlQuery += ' AND (LOWER(item_codigo) LIKE LOWER(?) OR LOWER(item_det) LIKE LOWER(?))';
       } 
       const [items] = await connection.execute(sqlQuery, [`%${searchTerm}%`, `%${searchTerm}%`]);
       // await connection.end();
@@ -1287,10 +1288,10 @@ const agregarMovimiento = async (req, res) => {
 
       if (movimientoExiste.length > 0) {
         
-
+        
         const resultMovi = await insertarLOG("UPDATE", req.id, "UPDATE movimiento SET tipoInstrumento_id = ? , instrumento_nro = ?, encuadrelegal_id = ?, tipocompra_id = ? WHERE movimiento_id = ?", [expediente.tipoDeInstrumento, expediente.numeroInstrumento, encuadreLegal, tipoDeCompra, movimiento.id], "movimiento", connection);
-
-
+        
+        
         if (resultMovi.affectedRows == 0) {
           throw new Error('Error al actualizar movimiento');
         }
@@ -1301,39 +1302,40 @@ const agregarMovimiento = async (req, res) => {
         if (!tablaEspejo) {
           throw new Error('Error al insertar histórico');
         }
-
+        
         const result = await insertarLOG("DELETE", req.id, "DELETE FROM detmovimiento WHERE movimiento_id = ?", [movimientoId], "detmovimiento", connection);
         if (result.affectedRows == 0) {
           throw new Error('Error al eliminar detmovimiento');
         } 
-
+        
         for (const detalle of detMovimiento) {
-
-          const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detPresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
-
+          
+          const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle?.detPresupuesto_id?? detalle?.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
+          
           if(log.affectedRows == 0){
             throw new Error('Error al insertar detmovimiento');
           }
-
+          
         }
-
+        
         const resultNomen = await insertarLOG("DELETE", req.id, "DELETE FROM detmovimiento_nomenclador WHERE movimiento_id = ?", [movimientoId], "detmovimiento_nomenclador", connection);
         if (resultNomen.affectedRows == 0) {
           throw new Error('Error al eliminar detmovimiento_nomenclador');
         } 
-
+        
         for (const item of items) {
-
-          const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detPresupuesto_id], "detmovimiento_nomenclador", connection);
-
+          
+          const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id ], "detmovimiento_nomenclador", connection);
+          
           if(log.affectedRows == 0){
             throw new Error('Error al insertar detmovimiento_nomenclador');
           }
-
+          
         }
         
+        console.log("eee");
         if(movimiento.tipomovimiento_id == 1){
-    
+          
           const [result] = await connection.execute(
             'CALL sp_docreserva(?)',
             [movimientoId]
@@ -1376,7 +1378,7 @@ const agregarMovimiento = async (req, res) => {
   
   
       for (const detalle of detMovimiento) {
-      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detPresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
+      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle?.detPresupuesto_id?? detalle?.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
   
       if(log.affectedRows == 0){
         throw new Error('Error al insertar detmovimiento');
@@ -1385,7 +1387,7 @@ const agregarMovimiento = async (req, res) => {
       }
   
       for (const item of items) {
-        const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detPresupuesto_id], "detmovimiento_nomenclador", connection);
+        const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id], "detmovimiento_nomenclador", connection);
   
         if(log.affectedRows == 0){
           throw new Error('Error al insertar detmovimiento_nomenclador');
@@ -1557,7 +1559,7 @@ const agregarMovimientoDefinitivaPreventivaSinArchivo = async (req, res) => {
     let totalImporte = 0;
     for (const detalle of detMovimiento) {
     
-      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detPresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
+      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
 
       if(log.affectedRows == 0){
         throw new Error('Error al insertar detmovimiento');
@@ -1568,7 +1570,7 @@ const agregarMovimientoDefinitivaPreventivaSinArchivo = async (req, res) => {
 
     for (const item of items) {
 
-      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detPresupuesto_id], "detmovimiento_nomenclador", connection);
+      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detpresupuesto_id], "detmovimiento_nomenclador", connection);
 
       if(log.affectedRows == 0){
         throw new Error('Error al insertar detmovimiento_nomenclador');
@@ -1650,7 +1652,7 @@ const agregarMovimientoCompromiso = async (req, res) => {
     let totalImporte = 0;
     for (const detalle of detMovimiento) {
     
-      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detPresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
+      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
 
       if(log.affectedRows == 0){
         throw new Error('Error al insertar detmovimiento');
@@ -1661,7 +1663,7 @@ const agregarMovimientoCompromiso = async (req, res) => {
 
     for (const item of items) {
 
-      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detPresupuesto_id], "detmovimiento_nomenclador", connection);
+      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detpresupuesto_id], "detmovimiento_nomenclador", connection);
 
       if(log.affectedRows == 0){
         throw new Error('Error al insertar detmovimiento_nomenclador');
@@ -1778,7 +1780,7 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
     let totalImporte = 0;
     for (const detalle of detMovimiento) {
     
-      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detPresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
+      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
 
       if(log.affectedRows == 0){
         throw new Error('Error al insertar detmovimiento');
@@ -1789,7 +1791,7 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
 
     for (const item of items) {
 
-      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detPresupuesto_id], "detmovimiento_nomenclador", connection);
+      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detpresupuesto_id], "detmovimiento_nomenclador", connection);
 
       if(log.affectedRows == 0){
         throw new Error('Error al insertar detmovimiento_nomenclador');
@@ -2600,6 +2602,46 @@ const obtenerProveedor = async (req,res) => {
 }
 
 
+// const buscarExpedienteParaModificarDefinitiva = async (req, res) => {
+//   let connection;
+//   try {
+//     connection = await conectar_BD_GAF_MySql();
+//     const numero = req.query.numero;
+//     const tipomovimiento_id = req.query.tipomovimiento_id;
+//     const anio = req.query.anio;
+
+
+//     const query = `SELECT e.expediente_id,e.item_id,e.expediente_numero,e.expediente_anio,e.expediente_causante,e.expediente_asunto,e.expediente_fecha,e.expediente_detalle , m.presupuesto_id,m.movimiento_id,m.encuadrelegal_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,prov.*,
+// ti.tipoinstrumento_det, d.detmovimiento_id,d.detpresupuesto_id,d.detpresupuesto_id2,d.detmovimiento_importe,dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones,
+// i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id
+// FROM expediente AS e 
+// LEFT JOIN movimiento AS m ON e.expediente_id = m.expediente_id 
+// LEFT JOIN encuadrelegal AS el ON m.encuadrelegal_id = el.encuadrelegal_id 
+// LEFT JOIN proveedores AS prov ON m.proveedor_id = prov.proveedor_id
+// LEFT JOIN tipoinstrumento AS ti ON m.tipoinstrumento_id = ti.tipoinstrumento_id 
+// LEFT JOIN detmovimiento AS d ON m.movimiento_id = d.movimiento_id 
+// LEFT JOIN detpresupuesto AS dp ON d.detpresupuesto_id = dp.detpresupuesto_id
+// LEFT JOIN item AS i ON dp.item_id = i.item_id 
+// LEFT JOIN partidas AS pda ON dp.partida_id=pda.partida_id  
+// WHERE e.expediente_numero = ? AND m.tipomovimiento_id = ? AND e.expediente_anio = ?
+//     `;
+
+
+//     const [result] = await connection.execute(query, [numero, tipomovimiento_id, anio]);
+
+//     console.log(result);
+
+//     res.status(200).json(result);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message || "Algo salió mal :(" });
+//   } finally {
+//     // Cerrar la conexión a la base de datos
+//     if (connection) {
+//       await connection.end();
+//     }
+//   }
+// }
+
 const buscarExpedienteParaModificarDefinitiva = async (req, res) => {
   let connection;
   try {
@@ -2611,7 +2653,7 @@ const buscarExpedienteParaModificarDefinitiva = async (req, res) => {
 
     const query = `SELECT e.expediente_id,e.item_id,e.expediente_numero,e.expediente_anio,e.expediente_causante,e.expediente_asunto,e.expediente_fecha,e.expediente_detalle , m.presupuesto_id,m.movimiento_id,m.encuadrelegal_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,prov.*,
 ti.tipoinstrumento_det, d.detmovimiento_id,d.detpresupuesto_id,d.detpresupuesto_id2,d.detmovimiento_importe,dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones,
-i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id
+i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id, pda.partida_det, pda.partida_codigo
 FROM expediente AS e 
 LEFT JOIN movimiento AS m ON e.expediente_id = m.expediente_id 
 LEFT JOIN encuadrelegal AS el ON m.encuadrelegal_id = el.encuadrelegal_id 
@@ -2647,8 +2689,10 @@ const buscarExpedienteParaModificarNomenclador = async (req, res) => {
     const movimiento_id = req.query.movimiento_id;
 
 
-    const query = `SELECT * FROM detmovimiento_nomenclador AS det JOIN nomenclador AS nom ON det.nomenclador_id = nom.nomenclador_id JOIN partidas AS p ON nom.partida_id = p.partida_id WHERE movimiento_id = ?`;
+    // const query = `SELECT * FROM detmovimiento_nomenclador AS det JOIN nomenclador AS nom ON det.nomenclador_id = nom.nomenclador_id JOIN partidas AS p ON nom.partida_id = p.partida_id WHERE movimiento_id = ?`;
 
+    const query = `SELECT det.*, it.*, nom.*, p.partida_id,p.partida_codigo,p.partida_det, p.item_id AS partida_itemId FROM detmovimiento_nomenclador AS det JOIN detpresupuesto AS dtp ON det.detPresupuesto_id = dtp.detpresupuesto_id JOIN item AS it ON dtp.item_id = it.item_id JOIN nomenclador AS nom ON det.nomenclador_id = nom.nomenclador_id JOIN partidas AS p ON nom.partida_id = p.partida_id WHERE movimiento_id = ?`;
+//ver fecha fin en item
 
     const [result] = await connection.execute(query, [movimiento_id]);
 
@@ -3554,6 +3598,36 @@ const obtenerNomencladores = async (req, res) => {
   }
 };
 
+const obtenerNomencladoresPorPartida = async (req, res) => {
+  let connection;
+  try {
+    connection = await conectar_BD_GAF_MySql(); // Conexión a la base de datos
+    const partidaId  = req.query.partidaId;
+    // Consulta para obtener los nomencladores y realizar el JOIN con la tabla partidas
+    const sqlNomencladores = `
+      SELECT *
+      FROM nomenclador
+      WHERE nomenclador.partida_id = ${partidaId}
+      ORDER BY nomenclador.nomenclador_det ASC
+    `;
+
+    // Ejecutar la consulta
+    const [nomencladores] = await connection.execute(sqlNomencladores);
+
+    // Enviar los resultados como respuesta
+    res.status(200).json({ nomencladores });
+  } catch (error) {
+    // Manejo de errores detallado
+    console.error('Error al obtener los nomencladores:', error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
+
 const obtenerEncuadres = async (req, res) => {
   let connection;
   try {
@@ -3985,7 +4059,7 @@ module.exports = {
   obtenerNomencladores,
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
  obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem,
- obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo,modificarAltaDeCompromiso, modificarDefinitiva, obtenerLibramiento,buscarProveedorPorCuit, registroCompromisoAltaSinArchivo, agregarMovimientoCompromiso, agregarMovimientoDefinitivaPreventivaSinArchivo, chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva
+ obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo,modificarAltaDeCompromiso, modificarDefinitiva, obtenerLibramiento,buscarProveedorPorCuit, registroCompromisoAltaSinArchivo, agregarMovimientoCompromiso, agregarMovimientoDefinitivaPreventivaSinArchivo, chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva, obtenerNomencladoresPorPartida
 };
 
 
