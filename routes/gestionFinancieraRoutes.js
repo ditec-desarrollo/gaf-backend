@@ -95,8 +95,9 @@ const {
     agregarMovimientoDefinitivaPreventivaSinArchivo,
     chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva,
     obtenerNomencladoresPorPartida,
-    transferirEstructuraItem
+    transferirEstructuraItem,
   } = require("../controllers/gestionFinancieraControllers");
+const { listarTipoUsuario, listarUsuarios, listarProcesos, listarOpciones, agregarTipoUsuario, editarTipoUsuario, eliminarTipoUsuario, listarPermisosTU, actualizarPermisosTU, agregarUsuario, verificarEmpleado, listarPermisosU, actualizarPermisosU, agregarProceso, deshabilitarProceso, editarProceso } = require("../controllers/gafAdmin");
 
 const router = Router();
 
@@ -263,5 +264,27 @@ router.get("/obtenerMovimientoReserva",auth, obtenerMovimientoReserva)
 router.get("/obtenerMovimientoCompromiso",auth, obtenerMovimientoCompromiso)
 
 router.get("/obtenerLibramiento",auth, obtenerLibramiento)
+
+// CONTROLADORES PARA ADMIN DE GAF
+
+router.get("/listarTipoUsuario", listarTipoUsuario);
+router.post("/agregarTipoUsuario", agregarTipoUsuario);
+router.put("/editarTipoUsuario/:id", editarTipoUsuario);
+router.delete("/eliminarTipoUsuario/:id", eliminarTipoUsuario);
+router.get("/listarPermisosTU/:id_tusuario", listarPermisosTU);
+router.post("/actualizarPermisosTU/:usuarioId", actualizarPermisosTU);
+
+router.post("/verificarEmpleado/:afiliado", verificarEmpleado);
+router.post("/agregarUsuario", agregarUsuario);
+router.post("/listarPermisosUsuario/", listarPermisosU);
+router.post("/actualizarPermisosU/:usuarioId", actualizarPermisosU);
+router.get("/listarUsuarios", listarUsuarios)
+
+router.get("/listarProcesos", listarProcesos);
+router.get("/altaProceso", agregarProceso);
+router.post('/deshabilitarProceso/:id_proceso', deshabilitarProceso);
+router.put('/editarP/:id_proceso', editarProceso);
+
+router.get("/listarOpciones", listarOpciones)
 
 module.exports = router;
