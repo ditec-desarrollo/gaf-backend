@@ -1587,7 +1587,7 @@ const agregarMovimientoDefinitivaPreventivaSinArchivo = async (req, res) => {
 
     for (const item of items) {
 
-      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detpresupuesto_id], "detmovimiento_nomenclador", connection);
+      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id], "detmovimiento_nomenclador", connection);
 
       if(log.affectedRows == 0){
         throw new Error('Error al insertar detmovimiento_nomenclador');
@@ -2481,7 +2481,7 @@ const buscarExpediente = async (req, res) => {
 
     // Primera consulta: Obtener los detalles del expediente
     const query1 = `
-    SELECT e.*, m.presupuesto_id,m.movimiento_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,m.encuadrelegal_id, prov.*, d.detmovimiento_id,d.detpresupuesto_id,d.detmovimiento_importe, dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones, i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id
+    SELECT e.*, m.presupuesto_id,m.movimiento_id,m.movimiento_fecha,m.tipomovimiento_id,m.movimiento_id2,m.tipoinstrumento_id,m.instrumento_nro,m.encuadrelegal_id, prov.*, d.detmovimiento_id,d.detpresupuesto_id,d.detmovimiento_importe, dp.partida_id,dp.presupuesto_anteproyecto,dp.presupuesto_aprobado,dp.presupuesto_credito,dp.presupuesto_ampliaciones,dp.presupuesto_disminuciones, i.item_det,i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, i.item_fechainicio,i.item_fechafin,i.organismo_id, el.tipocompra_id, pda.partida_det, pda.partida_codigo
     FROM expediente AS e
     LEFT JOIN movimiento AS m ON e.expediente_id = m.expediente_id
     LEFT JOIN encuadrelegal AS el ON m.encuadrelegal_id = el.encuadrelegal_id 
