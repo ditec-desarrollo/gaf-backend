@@ -1763,7 +1763,7 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
        }
    
        // Carpeta de destino
-       const destino = `C:/xampp/htdocs/gaf/movimientos/${obj.movimiento.id}/${obj.movimiento.tipomovimiento_id}`;  // Ruta de destino
+       const destino = `mnt/gaf/movimientos/${obj.movimiento.id}/${obj.movimiento.tipomovimiento_id}`;  // Ruta de destino
       //  const destino = `C:\\Users\\usuario\\Downloads\\${obj.movimiento.id}\\${obj.movimiento.tipomovimiento_id}`;  // Ruta de destino
    
        // Asegúrate de que la carpeta destino exista, si no, crea una
@@ -2290,24 +2290,46 @@ const modificarMovimientoAltaDeCompromiso= async (expediente, tipoDeInstrumento,
 }
 
 
+// const moverArchivos = (file, destino) => {
+//   return new Promise((resolve, reject) => {
+//     const archivoOrigen = file.path;  // Ruta del archivo original en 'uploads'
+//     console.log(file);
+//     const extension = path.extname(file.originalname);
+
+//     const archivoDestino = path.join(destino, `${file.fieldname}${extension}`);  // Ruta de destino completa
+
+//     fs.rename(archivoOrigen, archivoDestino, (err) => {
+//       if (err) {
+//         reject(err);  // Si hay un error, lo rechazamos
+//       } else {
+//         resolve(archivoDestino);  // Si el archivo se movió con éxito
+//       }
+//     });
+//   });
+// };
+
+
 const moverArchivos = (file, destino) => {
   return new Promise((resolve, reject) => {
-    const archivoOrigen = file.path;  // Ruta del archivo original en 'uploads'
-    console.log(file);
-    const extension = path.extname(file.originalname);
+    try {
+      const archivoOrigen = file.path; // Ruta del archivo original en 'uploads'
+      console.log(file);
+      const extension = path.extname(file.originalname);
 
-    const archivoDestino = path.join(destino, `${file.fieldname}${extension}`);  // Ruta de destino completa
+      const archivoDestino = path.join(destino, `${file.fieldname}${extension}`); // Ruta de destino completa
 
-    fs.rename(archivoOrigen, archivoDestino, (err) => {
-      if (err) {
-        reject(err);  // Si hay un error, lo rechazamos
-      } else {
-        resolve(archivoDestino);  // Si el archivo se movió con éxito
-      }
-    });
+      // Copiar archivo al destino
+      fs.copyFileSync(archivoOrigen, archivoDestino);
+
+      // Eliminar el archivo original
+      fs.unlinkSync(archivoOrigen);
+
+      resolve(archivoDestino); // Devolver la nueva ruta del archivo
+    } catch (err) {
+      reject(err);
+    }
   });
 };
-
 
 const registroCompromisoAlta = async (req, res) => {
   let connection;
@@ -2328,7 +2350,7 @@ const registroCompromisoAlta = async (req, res) => {
     connection = await conectar_BD_GAF_MySql();
 
     // Carpeta de destino
-    const destino = `C:/xampp/htdocs/gaf/movimientos/${obj.movimiento.id}/${obj.movimiento.tipomovimiento_id}`;  // Ruta de destino
+    const destino = `/mnt/gaf/movimientos/${obj.movimiento.id}/${obj.movimiento.tipomovimiento_id}`;  // Ruta de destino
     // const destino = `C:\\Users\\usuario\\Downloads\\${obj.movimiento.id}\\${obj.movimiento.tipomovimiento_id}`;  // Ruta de destino
 
     // Asegúrate de que la carpeta destino exista, si no, crea una
@@ -2442,7 +2464,7 @@ const obtenerArchivo = async (req, res) => {
     console.log(`Directorio: ${rutaSinArchivo}, Nombre del archivo: ${nombreArchivo}`);
 
     // const rutaDirectorio = path.join('C:/Users/usuario/Downloads', rutaSinArchivo);
-    const rutaDirectorio = path.join('C:/xampp/htdocs/gaf/movimientos', rutaSinArchivo);
+    const rutaDirectorio = path.join('/mnt/gaf/movimientos', rutaSinArchivo);
 
     // Verificar si el directorio existe
     if (!fs.existsSync(rutaDirectorio)) {
