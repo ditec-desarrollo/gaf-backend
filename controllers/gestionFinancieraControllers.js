@@ -1745,7 +1745,7 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
   let connection;
   try {
     const { movimiento, detMovimiento, expediente, presupuesto, proveedor, items, encuadreLegal, tipoDeCompra, item_id, libramiento_anio } = JSON.parse(req.body.requestData);
-    // console.log(JSON.parse(req.body.requestData));
+    console.log(JSON.parse(req.body.requestData));
 
     connection = await conectar_BD_GAF_MySql();
     await connection.beginTransaction();
@@ -1797,7 +1797,7 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
     let totalImporte = 0;
     for (const detalle of detMovimiento) {
     
-      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
+      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle?.detPresupuesto_id?? detalle?.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
 
       if(log.affectedRows == 0){
         throw new Error('Error al insertar detmovimiento');
@@ -1808,7 +1808,7 @@ const agregarMovimientoDefinitivaPreventiva = async (req, res) => {
 
     for (const item of items) {
 
-      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item.detpresupuesto_id], "detmovimiento_nomenclador", connection);
+      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id], "detmovimiento_nomenclador", connection);
 
       if(log.affectedRows == 0){
         throw new Error('Error al insertar detmovimiento_nomenclador');
@@ -2204,14 +2204,27 @@ const modificarMovimiento = async (req, res) => {
 };
 
 const modificarAltaDeCompromiso= async (req,res) => {
-const {encuadreLegal, tipoDeCompra, proveedor, movimiento, tipoDeInstrumento, numeroInstrumento} =req.body
+const {encuadreLegal, tipoDeCompra, proveedor, movimiento, tipoDeInstrumento, numeroInstrumento, items} =req.body
 let connection;
+console.log(req.body.items);
+
 try {
    connection = await conectar_BD_GAF_MySql();
    
 
     const resultUpdate = await insertarLOG("UPDATE", req.id, "UPDATE movimiento SET proveedor_id = ?, encuadrelegal_id = ?, tipocompra_id = ?, tipoinstrumento_id = ?, instrumento_nro = ? WHERE movimiento_id = ?", [proveedor.id,encuadreLegal,tipoDeCompra,tipoDeInstrumento, numeroInstrumento ,movimiento.id], "movimiento", connection);
+    
+    for (const item of items) {
+          
+      const log = await insertarLOG("UPDATE",req.id,'UPDATE detmovimiento_nomenclador SET proveedor_id = ? WHERE detmovimiento_nomenclador.detmovimiento_nomenclador_id = ?', [item?.proveedor_id?? item?.proveedor.id, item.detmovimiento_nomenclador_id], "detmovimiento_nomenclador", connection);
+      
+      if(log.affectedRows == 0){
+        throw new Error('Error al actualizar detmovimiento_nomenclador');
+      }
+      
+    }
 
+    
     if(resultUpdate.affectedRows == 0){
       throw new Error('Error al actualizar movimiento');
     }
@@ -2730,7 +2743,7 @@ const buscarExpedienteParaModificarNomenclador = async (req, res) => {
 
     // const query = `SELECT * FROM detmovimiento_nomenclador AS det JOIN nomenclador AS nom ON det.nomenclador_id = nom.nomenclador_id JOIN partidas AS p ON nom.partida_id = p.partida_id WHERE movimiento_id = ?`;
 
-    const query = `SELECT det.*, it.*, nom.*, p.partida_id,p.partida_codigo,p.partida_det, p.item_id AS partida_itemId FROM detmovimiento_nomenclador AS det JOIN detpresupuesto AS dtp ON det.detPresupuesto_id = dtp.detpresupuesto_id JOIN item AS it ON dtp.item_id = it.item_id JOIN nomenclador AS nom ON det.nomenclador_id = nom.nomenclador_id JOIN partidas AS p ON nom.partida_id = p.partida_id WHERE movimiento_id = ?`;
+    const query = `SELECT det.detmovimiento_nomenclador_id,det.movimiento_id,det.nomenclador_id,det.descripcion,det.cantidad,det.precio,det.total,det.detPresupuesto_id,det.detpresupuesto_id_anterior,det.orden, it.*, nom.*, p.partida_id,p.partida_codigo,p.partida_det, p.item_id AS partida_itemId, prov.* FROM detmovimiento_nomenclador AS det LEFT JOIN detpresupuesto AS dtp ON det.detPresupuesto_id = dtp.detpresupuesto_id LEFT JOIN item AS it ON dtp.item_id = it.item_id LEFT JOIN nomenclador AS nom ON det.nomenclador_id = nom.nomenclador_id LEFT JOIN partidas AS p ON nom.partida_id = p.partida_id LEFT JOIN proveedores AS prov ON det.proveedor_id = prov.proveedor_id WHERE movimiento_id = ?`;
 //ver fecha fin en item
 
     const [result] = await connection.execute(query, [movimiento_id]);
