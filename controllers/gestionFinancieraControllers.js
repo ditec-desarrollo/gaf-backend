@@ -1340,9 +1340,9 @@ const agregarMovimiento = async (req, res) => {
           throw new Error('Error al eliminar detmovimiento_nomenclador');
         } 
         
-        for (const item of items) {
+        for (const [index, item] of items.entries()) {
           
-          const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id ], "detmovimiento_nomenclador", connection);
+          const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id, orden ) VALUES (?,?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id, index + 1], "detmovimiento_nomenclador", connection);
           
           if(log.affectedRows == 0){
             throw new Error('Error al insertar detmovimiento_nomenclador');
@@ -1403,8 +1403,8 @@ const agregarMovimiento = async (req, res) => {
   
       }
   
-      for (const item of items) {
-        const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id], "detmovimiento_nomenclador", connection);
+      for (const [index, item] of items.entries()) {
+        const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id, orden ) VALUES (?,?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id, index + 1], "detmovimiento_nomenclador", connection);
   
         if(log.affectedRows == 0){
           throw new Error('Error al insertar detmovimiento_nomenclador');
@@ -2740,11 +2740,7 @@ const buscarExpedienteParaModificarNomenclador = async (req, res) => {
     connection = await conectar_BD_GAF_MySql();
     const movimiento_id = req.query.movimiento_id;
 
-
-    // const query = `SELECT * FROM detmovimiento_nomenclador AS det JOIN nomenclador AS nom ON det.nomenclador_id = nom.nomenclador_id JOIN partidas AS p ON nom.partida_id = p.partida_id WHERE movimiento_id = ?`;
-
-    const query = `SELECT det.detmovimiento_nomenclador_id,det.movimiento_id,det.nomenclador_id,det.descripcion,det.cantidad,det.precio,det.total,det.detPresupuesto_id,det.detpresupuesto_id_anterior,det.orden, it.*, nom.*, p.partida_id,p.partida_codigo,p.partida_det, p.item_id AS partida_itemId, prov.* FROM detmovimiento_nomenclador AS det LEFT JOIN detpresupuesto AS dtp ON det.detPresupuesto_id = dtp.detpresupuesto_id LEFT JOIN item AS it ON dtp.item_id = it.item_id LEFT JOIN nomenclador AS nom ON det.nomenclador_id = nom.nomenclador_id LEFT JOIN partidas AS p ON nom.partida_id = p.partida_id LEFT JOIN proveedores AS prov ON det.proveedor_id = prov.proveedor_id WHERE movimiento_id = ?`;
-//ver fecha fin en item
+    const query = `SELECT det.detmovimiento_nomenclador_id,det.movimiento_id,det.nomenclador_id,det.descripcion,det.cantidad,det.precio,det.total,det.detPresupuesto_id,det.detpresupuesto_id_anterior,det.orden, it.*, nom.*, p.partida_id,p.partida_codigo,p.partida_det, p.item_id AS partida_itemId, prov.* FROM detmovimiento_nomenclador AS det LEFT JOIN detpresupuesto AS dtp ON det.detPresupuesto_id = dtp.detpresupuesto_id LEFT JOIN item AS it ON dtp.item_id = it.item_id LEFT JOIN nomenclador AS nom ON det.nomenclador_id = nom.nomenclador_id LEFT JOIN partidas AS p ON nom.partida_id = p.partida_id LEFT JOIN proveedores AS prov ON det.proveedor_id = prov.proveedor_id WHERE det.movimiento_id = ? AND it.item_fechafin IS NULL ORDER BY det.orden`;
 
     const [result] = await connection.execute(query, [movimiento_id]);
 
