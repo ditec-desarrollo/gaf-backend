@@ -143,6 +143,36 @@ const eliminarTipoUsuario = async (req, res) => {
   }
 };
 
+const cambiarTipoUsuario = async (req, res) => {
+  let connection;
+  try {
+    const { id_tusuario, cuil } = req.body; 
+
+    if (!cuil || !id_tusuario) {
+      return res.status(400).json({ message: "Los parámetros id_usuario y id_tusuario son obligatorios" });
+    }
+
+    connection = await conectar_BD_GAF_MySql();
+
+    // Actualizar el tipo de usuario del usuario
+    const sqlQuery = "UPDATE usuarios SET id_tusuario = ? WHERE cuil = ?";
+    const [result] = await connection.execute(sqlQuery, [id_tusuario, cuil]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "No se encontró el usuario con ese cuil" });
+    }
+
+    res.status(200).json({ message: "Tipo de usuario actualizado con éxito" });
+  } catch (error) {
+    console.error("❌ Error al cambiar el tipo de usuario:", error);
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
+
 const actualizarPermisosTU = async (req, res) => {
     let connection;
     try {
@@ -274,7 +304,7 @@ const verificarEmpleado = async (req, res) => {
 const agregarUsuario = async (req, res) => {
     let connection;
     try {
-        const { cuil, perfil_id } = req.body;
+        const { cuil, perfil_id, id_tusuario } = req.body;
 
         if (!cuil || !perfil_id) {
             return res.status(400).json({ message: "Los parámetros de la solicitud son inválidos" });
@@ -291,8 +321,8 @@ const agregarUsuario = async (req, res) => {
         }
 
         // Si no existe, proceder con el INSERT
-        const sqlInsert = "INSERT INTO usuarios (cuil, perfil_id) VALUES (?, ?)";
-        const [result] = await connection.execute(sqlInsert, [cuil, perfil_id]);
+        const sqlInsert = "INSERT INTO usuarios (cuil, perfil_id, id_tusuario) VALUES (?, ?, ?)";
+        const [result] = await connection.execute(sqlInsert, [cuil, null, id_tusuario]);
 
         res.status(201).json({
             message: "Usuario creado con éxito",
@@ -615,5 +645,6 @@ module.exports = {
     actualizarPermisosU,
     agregarProceso,
     deshabilitarProceso,
-    editarProceso
+    editarProceso,
+    cambiarTipoUsuario,
 };
