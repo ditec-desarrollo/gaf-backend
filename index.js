@@ -39,6 +39,6 @@ app.use('/gestionFinanciera', gestionFinancieraRoutes)
 //     console.log(`server listening on port 7774`);
 //   });
 
-  app.listen(3050, () => {
-    console.log(`server listening on port 3050`);
+  app.listen(4000, () => {
+    console.log(`server listening on port 4000`);
   });
