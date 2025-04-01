@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const {
   conectarBDEstadisticasMySql,
+  conectar_BD_GAF_MySql,
 } = require("../config/dbEstadisticasMYSQL");
 const nodemailer = require("nodemailer");
 const moment = require("moment-timezone");
@@ -307,50 +308,49 @@ const obtenerPermisos = async (req, res) => {
   let connection;
 
   try {
-    connection = await conectarBDEstadisticasMySql();
+    connection = await conectar_BD_GAF_MySql();
 
-    const { idTusuario, idPersona } = req.params;
+    const { idPersona, cuil } = req.params;
 
     // Verificar si ambos parámetros están presentes
-    if (!idTusuario || !idPersona) {
+    if (!cuil || !idPersona) {
       return res.status(400).json({ message: "Faltan parámetros en la URL" });
     }
 
-    // Verificar si el idPersona existe en permiso_persona
+    // Verificar si el idPersona existe en usuarios
     const [permisoPersona] = await connection.execute(
-      "SELECT * FROM permiso_persona WHERE id_persona = ?",
-      [idPersona] // Aquí pasamos el parámetro como un array
-    );
+      "SELECT * FROM permiso_persona WHERE id_persona = ?", [idPersona]);
+
+    const [[{ id_tusuario } = {}]] = await connection.execute(
+      "SELECT id_tusuario FROM usuarios WHERE cuil = ?", [cuil]);
 
     if (permisoPersona.length > 0) {
       // Si existe en permiso_persona, obtenemos la información de permisos
-      const [user] = await connection.execute(
-        `SELECT pu.*, pro.descripcion, pro.nombre_proceso, o.id_opcion, o.nombre_opcion
-        FROM permiso_persona pu
-        LEFT JOIN proceso pro ON pu.id_proceso = pro.id_proceso 
-        LEFT JOIN opcion o ON pro.id_opcion = o.id_opcion
-        WHERE pu.id_persona = ?
-        ORDER BY o.id_opcion ASC`,
-        [idPersona] // Pasamos idPersona como un array
+      const [permisos] = await connection.execute(
+        `SELECT pt.*, p.nombre_proceso, p.descripcion, o.nombre_opcion, o.nivel1, o.nivel2, o.nivel3, o.nivel4, o.nivel5, o.icono 
+        FROM permiso_persona pt
+        LEFT JOIN proceso p ON pt.id_proceso = p.id_proceso 
+        LEFT JOIN opcion o ON p.id_opcion = o.id_opcion 
+        WHERE pt.id_persona = ? AND o.habilita = 1 AND p.habilita = 1;`,
+        [idPersona] 
       );
-      return res.status(200).json({ message: "Existe", usuario: user });
+      return res.status(200).json({ message: "Existe", permisos: permisos });
     } else {
       // Si no existe en permiso_persona, verificamos en permiso_tusuario
-      const [user] = await connection.execute(
-        `SELECT pu.*, pro.descripcion, pro.nombre_proceso, o.id_opcion, o.nombre_opcion
-        FROM permiso_tusuario pu
-        LEFT JOIN proceso pro ON pu.id_proceso = pro.id_proceso 
-        LEFT JOIN opcion o ON pro.id_opcion = o.id_opcion
-        WHERE pu.id_tusuario = ?
-        ORDER BY o.id_opcion ASC`,
-        [idTusuario] // Pasamos idTusuario como un array
+      const [permisos] = await connection.execute(
+        `SELECT pt.*, p.nombre_proceso, p.descripcion, o.nombre_opcion, o.nivel1, o.nivel2, o.nivel3, o.nivel4, o.nivel5, o.icono 
+        FROM permiso_tusuario pt
+        LEFT JOIN proceso p ON pt.id_proceso = p.id_proceso 
+        LEFT JOIN opcion o ON p.id_opcion = o.id_opcion 
+        WHERE pt.id_tusuario = ? AND o.habilita = 1 AND p.habilita = 1`,
+        [id_tusuario] // Pasamos idTusuario como un array
       );
 
-      if (user.length === 0) {
-        throw new CustomError("Usuario no encontrado", 404);
+      if (!id_tusuario) {
+        return res.status(404).json({ message: "Usuario no encontrado" });
       }
 
-      return res.status(200).json({ usuario: user });
+      return res.status(200).json({ permisos: permisos });
     }
   } catch (error) {
     return res
