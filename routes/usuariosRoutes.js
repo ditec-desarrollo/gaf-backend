@@ -8,6 +8,7 @@ const {
   obtenerUsuarios,
   obtenerPermisos,
   obtenerOpcionesHabilitadas,
+  obtenerPerfiles,
 } = require("../controllers/usuariosControllers");
 
 const verifyRole = require("../middlewares/verifyRole");
@@ -18,6 +19,6 @@ router.get("/authStatus", auth, getAuthStatus);
 router.get("/listar/:id?", auth, verifyRole, obtenerUsuarios);
 router.get("/permisos/:cuil/:idPersona", auth, obtenerPermisos);
 router.get("/opciones", auth, obtenerOpcionesHabilitadas);
-
+router.get("/perfilPersona/:id", auth, obtenerPerfiles);
 
 module.exports = router;
