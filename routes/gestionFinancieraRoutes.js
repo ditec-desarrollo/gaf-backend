@@ -98,7 +98,7 @@ const {
     transferirEstructuraItem,
     buscarExpedienteAnulacion,
   } = require("../controllers/gestionFinancieraControllers");
-const { listarTipoUsuario, listarUsuarios, listarProcesos, listarOpciones, agregarTipoUsuario, editarTipoUsuario, eliminarTipoUsuario, listarPermisosTU, actualizarPermisosTU, agregarUsuario, verificarEmpleado, listarPermisosU, actualizarPermisosU, agregarProceso, deshabilitarProceso, editarProceso } = require("../controllers/gafAdmin");
+const { listarTipoUsuario, listarUsuarios, listarProcesos, listarOpciones, agregarTipoUsuario, editarTipoUsuario, eliminarTipoUsuario, listarPermisosTU, actualizarPermisosTU, agregarUsuario, verificarEmpleado, listarPermisosU, actualizarPermisosU, agregarProceso, deshabilitarProceso, editarProceso, cambiarTipoUsuario } = require("../controllers/gafAdmin");
 
 const router = Router();
 
@@ -275,6 +275,7 @@ router.put("/editarTipoUsuario/:id", editarTipoUsuario);
 router.delete("/eliminarTipoUsuario/:id", eliminarTipoUsuario);
 router.get("/listarPermisosTU/:id_tusuario", listarPermisosTU);
 router.post("/actualizarPermisosTU/:usuarioId", actualizarPermisosTU);
+router.post("/cambiarTipoUsuario", cambiarTipoUsuario);
 
 router.post("/verificarEmpleado/:afiliado", verificarEmpleado);
 router.post("/agregarUsuario", agregarUsuario);
@@ -283,7 +284,7 @@ router.post("/actualizarPermisosU/:usuarioId", actualizarPermisosU);
 router.get("/listarUsuarios", listarUsuarios)
 
 router.get("/listarProcesos", listarProcesos);
-router.get("/altaProceso", agregarProceso);
+router.post("/altaProceso", agregarProceso);
 router.post('/deshabilitarProceso/:id_proceso', deshabilitarProceso);
 router.put('/editarP/:id_proceso', editarProceso);
 

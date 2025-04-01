@@ -16,7 +16,7 @@ const router = Router();
 
 router.get("/authStatus", auth, getAuthStatus);
 router.get("/listar/:id?", auth, verifyRole, obtenerUsuarios);
-router.get("/permisos/:idTusuario/:idPersona", auth, obtenerPermisos);
+router.get("/permisos/:cuil/:idPersona", auth, obtenerPermisos);
 router.get("/opciones", auth, obtenerOpcionesHabilitadas);
 
 
