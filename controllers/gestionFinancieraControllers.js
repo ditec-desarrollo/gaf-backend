@@ -2817,6 +2817,35 @@ WHERE e.expediente_numero = ? AND m.tipomovimiento_id = ? AND e.expediente_anio 
   }
 }
 
+const buscarExpedienteAnulacion = async (req, res) => {
+  let connection;
+  try {
+    connection = await conectar_BD_GAF_MySql();
+    const numero = req.query.numero;
+    const tipomovimiento_id = req.query.tipomovimiento_id;
+    const anio = req.query.anio;
+
+    // Primera consulta: Obtener los detalles del expediente
+    const query = `SELECT * FROM expediente WHERE expediente.expediente_numero = ? AND expediente.expediente_anio = ?`;
+    const [result] = await connection.execute(query, [numero, anio]);
+    console.log(result);
+    
+    // const query1 = `SELECT * FROM movimiento WHERE movimiento.expediente_id = ?`;
+    // const [result1] = await connection.execute(query1, [result[0].expediente_id]);
+    // console.log(result1);
+
+
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
+
 const buscarExpedienteParaModificarNomenclador = async (req, res) => {
   let connection;
   try {
@@ -4219,7 +4248,7 @@ module.exports = {
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
  obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem,
 
- obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo,modificarAltaDeCompromiso, modificarDefinitiva, obtenerLibramiento,buscarProveedorPorCuit, registroCompromisoAltaSinArchivo, agregarMovimientoCompromiso, agregarMovimientoDefinitivaPreventivaSinArchivo, chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva, obtenerNomencladoresPorPartida, transferirEstructuraItem
+ obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo,modificarAltaDeCompromiso, modificarDefinitiva, obtenerLibramiento,buscarProveedorPorCuit, registroCompromisoAltaSinArchivo, agregarMovimientoCompromiso, agregarMovimientoDefinitivaPreventivaSinArchivo, chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva, obtenerNomencladoresPorPartida, transferirEstructuraItem, buscarExpedienteAnulacion
 
 };
 

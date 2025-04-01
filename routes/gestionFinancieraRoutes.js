@@ -96,6 +96,7 @@ const {
     chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva,
     obtenerNomencladoresPorPartida,
     transferirEstructuraItem,
+    buscarExpedienteAnulacion,
   } = require("../controllers/gestionFinancieraControllers");
 const { listarTipoUsuario, listarUsuarios, listarProcesos, listarOpciones, agregarTipoUsuario, editarTipoUsuario, eliminarTipoUsuario, listarPermisosTU, actualizarPermisosTU, agregarUsuario, verificarEmpleado, listarPermisosU, actualizarPermisosU, agregarProceso, deshabilitarProceso, editarProceso, cambiarTipoUsuario } = require("../controllers/gafAdmin");
 
@@ -154,6 +155,7 @@ router.get("/expediente/buscar",auth, buscarExpediente)
 router.get("/expediente/verificarExistenciaExpedienteEnReserva",auth, chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva)
 router.get("/expediente/buscarExpedienteComun",auth, buscarExpedienteParaModificarDefinitiva)
 router.get("/expediente/buscarExpedienteParaTransferencias",auth, buscarExpedienteParaModificarPorTransferenciaEntrePartidas)
+router.get("/expediente/buscarExpedienteAnulacion",auth, buscarExpedienteAnulacion)
 
 router.patch("/editarDetalleMovimiento",auth, editarDetalleMovimiento) //YA corregido con LOG
 
