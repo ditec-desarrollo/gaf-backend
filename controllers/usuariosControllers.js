@@ -363,6 +363,28 @@ const obtenerPermisos = async (req, res) => {
   }
 };
 
+const obtenerPerfiles = async (req,res) => {
+  let connection;
+  try {
+    connection = await conectar_BD_GAF_MySql();
+    console.log(req.params);
+    
+    const [perfilPersona] = await connection.execute(
+      "SELECT * FROM perfiles WHERE perfil_id = ?", [req.params.id]);
+
+      res.status(200).json(perfilPersona );
+
+  } catch (error) {
+    return res
+    .status(500)
+    .json({ message: error.message || "Algo salió mal :(" });
+  } finally{
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
+
 const obtenerOpcionesHabilitadas = async (req, res) => {
   let connection;
   try {
@@ -993,5 +1015,6 @@ module.exports = {
   restablecerClave,
   desactivarUsuario,
   enviarEmailMulta,
-  enviarEmailLibreDeuda
+  enviarEmailLibreDeuda,
+  obtenerPerfiles
 };
