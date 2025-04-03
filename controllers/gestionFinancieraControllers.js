@@ -1395,21 +1395,21 @@ const agregarMovimiento = async (req, res) => {
   
   
       for (const detalle of detMovimiento) {
-      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle?.detPresupuesto_id?? detalle?.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
-  
-      if(log.affectedRows == 0){
-        throw new Error('Error al insertar detmovimiento');
+        const log = await insertarLOG("INSERT", req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)", [movimientoId, detalle?.detPresupuesto_id ?? detalle?.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
+
+        if (log.affectedRows == 0) {
+          throw new Error('Error al insertar detmovimiento');
+        }
+
       }
-  
-      }
-  
+
       for (const [index, item] of items.entries()) {
-        const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id, orden ) VALUES (?,?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id, index + 1], "detmovimiento_nomenclador", connection);
-  
-        if(log.affectedRows == 0){
+        const log = await insertarLOG("INSERT", req.id, 'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id, orden ) VALUES (?,?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id, item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id ?? item?.detpresupuesto_id, index + 1], "detmovimiento_nomenclador", connection);
+
+        if (log.affectedRows == 0) {
           throw new Error('Error al insertar detmovimiento_nomenclador');
         }
-  
+
       }
       
       if(movimiento.tipomovimiento_id == 1){
@@ -1573,23 +1573,41 @@ const agregarMovimientoDefinitivaPreventivaSinArchivo = async (req, res) => {
 
     const movimientoId = resultMovi.insertId;
 
-    let totalImporte = 0;
-    for (const detalle of detMovimiento) {
+    // let totalImporte = 0;
+    // for (const detalle of detMovimiento) {
     
-      const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
+    //   const log = await insertarLOG("INSERT",req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)",  [movimientoId, detalle.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
 
-      if(log.affectedRows == 0){
+    //   if(log.affectedRows == 0){
+    //     throw new Error('Error al insertar detmovimiento');
+    //   }
+
+    //   totalImporte += parseFloat(detalle.importe);
+    // }
+
+    // for (const item of items) {
+
+    //   const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id], "detmovimiento_nomenclador", connection);
+
+    //   if(log.affectedRows == 0){
+    //     throw new Error('Error al insertar detmovimiento_nomenclador');
+    //   }
+
+    // }
+
+    for (const detalle of detMovimiento) {
+      const log = await insertarLOG("INSERT", req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)", [movimientoId, detalle?.detPresupuesto_id ?? detalle?.detpresupuesto_id, parseFloat(detalle.importe)], "detmovimiento", connection);
+
+      if (log.affectedRows == 0) {
         throw new Error('Error al insertar detmovimiento');
       }
 
-      totalImporte += parseFloat(detalle.importe);
     }
 
-    for (const item of items) {
+    for (const [index, item] of items.entries()) {
+      const log = await insertarLOG("INSERT", req.id, 'INSERT INTO detmovimiento_nomenclador (proveedor_id,movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id, orden ) VALUES (?,?,?,?,?,?,?,?,?)', [item?.proveedor_id?? item?.proveedor.id, movimientoId, item.nomenclador_id, item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id ?? item?.detpresupuesto_id, index + 1], "detmovimiento_nomenclador", connection);
 
-      const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id ) VALUES (?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id], "detmovimiento_nomenclador", connection);
-
-      if(log.affectedRows == 0){
+      if (log.affectedRows == 0) {
         throw new Error('Error al insertar detmovimiento_nomenclador');
       }
 
@@ -2206,25 +2224,16 @@ const modificarMovimiento = async (req, res) => {
 const modificarAltaDeCompromiso= async (req,res) => {
 const {encuadreLegal, tipoDeCompra, proveedor, movimiento, tipoDeInstrumento, numeroInstrumento, items,expediente, detMovimiento} =req.body
 let connection;
-console.log(req.body);
+console.log(req.body.items[0]);
 
 try {
    connection = await conectar_BD_GAF_MySql();
    await connection.beginTransaction();
 
-    // const resultUpdate = await insertarLOG("UPDATE", req.id, "UPDATE movimiento SET proveedor_id = ?, encuadrelegal_id = ?, tipocompra_id = ?, tipoinstrumento_id = ?, instrumento_nro = ? WHERE movimiento_id = ?", [proveedor.id,encuadreLegal,tipoDeCompra,tipoDeInstrumento, numeroInstrumento ,movimiento.id], "movimiento", connection);
-
-    //
-
     let sqlQueryExp = `SELECT * FROM expediente WHERE expediente_numero = ? AND expediente_anio = ?`;
     const [expedienteExiste] = await connection.execute(sqlQueryExp, [expediente.numero, expediente.anio])
     
     if (expedienteExiste?.length > 0) {
-
-    let sqlQueryMovi = `SELECT * FROM movimiento WHERE movimiento.expediente_id = ?`; //chequear bien el tema del movimiento id2
-    const [movimientoExiste] = await connection.execute(sqlQueryMovi, [expedienteExiste[0].expediente_id])
-
-    if (movimientoExiste.length > 0) {
       
       
       const resultMovi = await insertarLOG("UPDATE", req.id, "UPDATE movimiento SET proveedor_id = ?, tipoInstrumento_id = ? , instrumento_nro = ?, encuadrelegal_id = ?, tipocompra_id = ? WHERE movimiento_id = ?", [proveedor.id,tipoDeInstrumento, numeroInstrumento, encuadreLegal, tipoDeCompra, movimiento.id], "movimiento", connection);
@@ -2234,7 +2243,9 @@ try {
         throw new Error('Error al actualizar movimiento');
       }
       
-      const movimientoId = movimientoExiste[0].movimiento_id;
+      const movimientoId = movimiento.id
+      console.log(movimientoId);
+      
       const tablaEspejo = await historico("movimiento", "movimiento_h", "movimiento_id", movimientoId, req.id, "UPDATE", connection);
       
       if (!tablaEspejo) {
@@ -2262,8 +2273,11 @@ try {
       } 
       
       for (const [index, item] of items.entries()) {
+        const proveedorId = item.proveedor_id || item.proveedor?.id;
+        console.log(proveedorId);
         
-        const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (proveedor_id,movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id, orden ) VALUES (?,?,?,?,?,?,?,?,?)', [item?.proveedor_id?? item?.proveedor.id,movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id, index + 1], "detmovimiento_nomenclador", connection);
+        
+        const log = await insertarLOG("INSERT",req.id,'INSERT INTO detmovimiento_nomenclador (proveedor_id,movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id, orden ) VALUES (?,?,?,?,?,?,?,?,?)', [proveedorId,movimientoId, item.nomenclador_id,item.descripcion, item.cantidad, item.precio, item.total, item?.detPresupuesto_id?? item?.detpresupuesto_id, index + 1], "detmovimiento_nomenclador", connection);
         
         if(log.affectedRows == 0){
           throw new Error('Error al insertar detmovimiento_nomenclador');
@@ -2282,34 +2296,12 @@ try {
       await connection.commit();
 
       res.status(200).json({ message: "Movimiento actualizado con éxito", idMovi: movimientoId });
-    }else{
 
-      throw new Error("Movimiento no encontrado o no disponible para modificación");
-    }
 
   }else{
 
     throw new Error("Expediente no encontrado o no disponible para modificación");
   }
-    //
-    
-    // for (const item of items) {
-          
-    //   const log = await insertarLOG("UPDATE",req.id,'UPDATE detmovimiento_nomenclador SET proveedor_id = ? WHERE detmovimiento_nomenclador.detmovimiento_nomenclador_id = ?', [item?.proveedor_id?? item?.proveedor.id, item.detmovimiento_nomenclador_id], "detmovimiento_nomenclador", connection);
-      
-    //   if(log.affectedRows == 0){
-    //     throw new Error('Error al actualizar detmovimiento_nomenclador');
-    //   }
-      
-    // }
-
-    
-    // if(resultUpdate.affectedRows == 0){
-    //   throw new Error('Error al actualizar movimiento');
-    // }
-
-  
-    // res.status(200).json({ message: 'Movimiento actualizado correctamente', idMovi: movimiento.id });
 
   } catch (error) {
     if(connection){
@@ -2352,6 +2344,79 @@ const modificarDefinitiva= async (req,res) => {
       }
     }
   }
+
+const anularMovimiento = async (req, res) => {
+
+  let connection;
+  try {
+    const { movimiento, detMovimiento, expediente, presupuesto, items, encuadreLegal, tipoDeCompra } = req.body;
+    console.log(items);
+
+    connection = await conectar_BD_GAF_MySql();
+    await connection.beginTransaction();
+
+      const { fecha_actual } = await obtenerFechaDelServidor()
+
+      const resultMovi = await insertarLOG("INSERT", req.id, "INSERT INTO movimiento (movimiento_fecha,expediente_id,tipomovimiento_id,tipoinstrumento_id, instrumento_nro,presupuesto_id,encuadrelegal_id, tipocompra_id) VALUES (?,?,?,?,?,?,?,?)", [fecha_actual, expediente.id, movimiento.tipomovimiento_id, expediente.tipoDeInstrumento, expediente.numeroInstrumento, presupuesto, encuadreLegal, tipoDeCompra], "movimiento", connection);
+
+
+      if (resultMovi.affectedRows == 0) {
+        throw new Error('Error al insertar movimiento');
+      }
+
+      const movimientoId = resultMovi.insertId;
+      const tablaEspejo = await historico("movimiento", "movimiento_h", "movimiento_id", movimientoId, req.id, "INSERT", connection); //auditoria
+
+      if (!tablaEspejo) {
+        throw new Error('Error al insertar histórico');
+      }
+
+
+      for (const detalle of detMovimiento) {
+        const log = await insertarLOG("INSERT", req.id, "INSERT INTO detmovimiento (movimiento_id,detpresupuesto_id,detmovimiento_importe) VALUES (?,?,?)", [movimientoId, detalle?.detPresupuesto_id ?? detalle?.detpresupuesto_id, parseFloat(detalle.importe) * (-1)], "detmovimiento", connection);
+
+        if (log.affectedRows == 0) {
+          throw new Error('Error al insertar detmovimiento');
+        }
+
+      }
+
+      for (const [index, item] of items.entries()) {
+        const log = await insertarLOG("INSERT", req.id, 'INSERT INTO detmovimiento_nomenclador (movimiento_id,nomenclador_id,descripcion, cantidad, precio, total,detPresupuesto_id, orden ) VALUES (?,?,?,?,?,?,?,?)', [movimientoId, item.nomenclador_id, item.descripcion, item.cantidad, item.precio, item.total * (-1), item?.detPresupuesto_id ?? item?.detpresupuesto_id, index + 1], "detmovimiento_nomenclador", connection);
+
+        if (log.affectedRows == 0) {
+          throw new Error('Error al insertar detmovimiento_nomenclador');
+        }
+
+      }
+
+      // if (movimiento.tipomovimiento_id == 1) {
+
+      //   const [result] = await connection.execute(
+      //     'CALL sp_docreserva(?)',
+      //     [movimientoId]
+      //   );
+      // }
+
+      await connection.commit();
+
+
+      res.status(200).json({ message: "Movimiento anulado con éxito", idMovi: movimientoId });
+
+  } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+
+    res.status(500).json({ message: error.message || "Algo salió mal :(" });
+
+  } finally {
+    // Cerrar la conexión a la base de datos
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
 
 // const modificarMovimientoAltaDeCompromiso= async (expediente, tipoDeInstrumento, movimiento, connection) => {
 
@@ -2825,15 +2890,50 @@ const buscarExpedienteAnulacion = async (req, res) => {
     const tipomovimiento_id = req.query.tipomovimiento_id;
     const anio = req.query.anio;
 
-    // Primera consulta: Obtener los detalles del expediente
-    const query = `SELECT * FROM expediente WHERE expediente.expediente_numero = ? AND expediente.expediente_anio = ?`;
-    const [result] = await connection.execute(query, [numero, anio]);
-    console.log(result);
-    
-    // const query1 = `SELECT * FROM movimiento WHERE movimiento.expediente_id = ?`;
-    // const [result1] = await connection.execute(query1, [result[0].expediente_id]);
-    // console.log(result1);
+    const query = `SELECT e.expediente_id, e.item_id, e.expediente_numero, e.expediente_anio, e.expediente_causante, 
+       e.expediente_asunto, e.expediente_fecha, e.expediente_detalle, 
+       m.presupuesto_id, m.movimiento_id, m.encuadrelegal_id, m.movimiento_fecha, 
+       m.tipomovimiento_id, m.movimiento_id2, m.tipoinstrumento_id, m.instrumento_nro, m.tipomovimiento_id,
+       prov.*, ti.tipoinstrumento_det, d.detmovimiento_id, d.detpresupuesto_id, 
+       d.detpresupuesto_id2, d.detmovimiento_importe, dp.partida_id, 
+       dp.presupuesto_anteproyecto, dp.presupuesto_aprobado, dp.presupuesto_credito, 
+       dp.presupuesto_ampliaciones, dp.presupuesto_disminuciones, 
+       i.item_det, i.item_codigo, i.anexo_id, i.finalidad_id, i.funcion_id, 
+       i.item_fechainicio, i.item_fechafin, i.organismo_id, el.tipocompra_id, 
+       pda.partida_det, pda.partida_codigo
+FROM expediente AS e 
+LEFT JOIN movimiento AS m ON e.expediente_id = m.expediente_id
+LEFT JOIN encuadrelegal AS el ON m.encuadrelegal_id = el.encuadrelegal_id 
+LEFT JOIN proveedores AS prov ON m.proveedor_id = prov.proveedor_id
+LEFT JOIN tipoinstrumento AS ti ON m.tipoinstrumento_id = ti.tipoinstrumento_id 
+LEFT JOIN detmovimiento AS d ON m.movimiento_id = d.movimiento_id 
+LEFT JOIN detpresupuesto AS dp ON d.detpresupuesto_id = dp.detpresupuesto_id
+LEFT JOIN item AS i ON dp.item_id = i.item_id 
+LEFT JOIN partidas AS pda ON dp.partida_id=pda.partida_id  
+WHERE e.expediente_numero = ? 
+  AND e.expediente_anio = ? 
+    AND NOT EXISTS (  
+      SELECT 1  
+      FROM movimiento AS m2  
+      INNER JOIN expediente AS e2 ON m2.expediente_id = e2.expediente_id  
+      WHERE e2.expediente_numero = e.expediente_numero  
+        AND e2.expediente_anio = e.expediente_anio  
+        AND m2.tipomovimiento_id = 9  
+  )
+  AND m.movimiento_id2 = (
+      SELECT MAX(m2.movimiento_id2) 
+      FROM movimiento AS m2
+      INNER JOIN expediente AS e2 ON m2.expediente_id = e2.expediente_id
+      WHERE e2.expediente_numero = e.expediente_numero 
+        AND e2.expediente_anio = e.expediente_anio
+  );
+`;
 
+    const [result] = await connection.execute(query, [numero, anio]);
+
+    if(result.length === 0){
+      throw new Error("Este movimiento ya fue anulado");
+    }
 
     res.status(200).json(result);
   } catch (error) {
@@ -4248,7 +4348,7 @@ module.exports = {
   agregarNomenclador,editarNomenclador,eliminarNomenclador,listarPartidasConCodigoGasto,buscarExpedienteParaModificarNomenclador, obtenerEncuadres,
  obtenerEncuadresLegales,agregarEncuadreLegal,editarEncuadreLegal,eliminarEncuadreLegal, modificarMovimientoAltaDeCompromiso, obtenerTiposDeCompras,obtenerDatosItem,
 
- obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo,modificarAltaDeCompromiso, modificarDefinitiva, obtenerLibramiento,buscarProveedorPorCuit, registroCompromisoAltaSinArchivo, agregarMovimientoCompromiso, agregarMovimientoDefinitivaPreventivaSinArchivo, chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva, obtenerNomencladoresPorPartida, transferirEstructuraItem, buscarExpedienteAnulacion
+ obtenerMovimientoReserva, obtenerMovimientoCompromiso, registroCompromisoAlta, obtenerArchivo,modificarAltaDeCompromiso, modificarDefinitiva, obtenerLibramiento,buscarProveedorPorCuit, registroCompromisoAltaSinArchivo, agregarMovimientoCompromiso, agregarMovimientoDefinitivaPreventivaSinArchivo, chequearSiElExpedienteExisteAntesDeIniciarUnaReservaNueva, obtenerNomencladoresPorPartida, transferirEstructuraItem, buscarExpedienteAnulacion, anularMovimiento
 
 };
 

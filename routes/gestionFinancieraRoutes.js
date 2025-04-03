@@ -97,6 +97,7 @@ const {
     obtenerNomencladoresPorPartida,
     transferirEstructuraItem,
     buscarExpedienteAnulacion,
+    anularMovimiento,
   } = require("../controllers/gestionFinancieraControllers");
 const { listarTipoUsuario, listarUsuarios, listarProcesos, listarOpciones, agregarTipoUsuario, editarTipoUsuario, eliminarTipoUsuario, listarPermisosTU, actualizarPermisosTU, agregarUsuario, verificarEmpleado, listarPermisosU, actualizarPermisosU, agregarProceso, deshabilitarProceso, editarProceso, cambiarTipoUsuario } = require("../controllers/gafAdmin");
 
@@ -171,6 +172,7 @@ router.patch("/movimiento/editarAltaDeCompromiso",auth,modificarAltaDeCompromiso
 
 router.patch("/movimiento/editarDefinitiva",auth,modificarDefinitiva)  //YA corregido con LOG
 
+router.post("/movimiento/anularMovimiento",auth,anularMovimiento)
 
 // Configurar el almacenamiento de los archivos
 const storage = multer.diskStorage({
