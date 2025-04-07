@@ -608,7 +608,6 @@ const  editarProceso = async (req, res) => {
   }
 };
 
-
 const listarOpciones = async (req, res) => {
   let connection;
   try {
@@ -626,6 +625,77 @@ const listarOpciones = async (req, res) => {
     if (connection) {
       await connection.end();
     }
+  }
+};
+
+const deshabilitarOpcion = async (req, res) => {
+  let connection;
+  try {
+      const { id_opcion } = req.params;
+
+      if (!id_opcion) {
+          throw new Error("El id_opcion es obligatorio");
+      }
+
+      connection = await conectar_BD_GAF_MySql();
+      await connection.beginTransaction();
+
+      // ✅ Actualizar el campo 'ver' a 0 en la tabla 'proceso'
+      const sqlUpdateProceso = `
+          UPDATE opcion 
+          SET habilita = 0 
+          WHERE id_opcion = ?
+      `;
+      const [result] = await connection.execute(sqlUpdateProceso, [id_opcion]);
+
+      if (result.affectedRows === 0) {
+          throw new Error("La opcion no existe o ya está deshabilitado");
+      }
+
+      // ✅ Confirmar la transacción
+      await connection.commit();
+      res.status(200).json({ message: "Opción deshabilitada con éxito" });
+
+  } catch (error) {
+      console.log("❌ Error:", error);
+      if (connection) {
+          await connection.rollback();
+      }
+      res.status(500).json({ message: error.message || "Algo salió mal :(" });
+
+  } finally {
+      if (connection) {
+          await connection.end();
+      }
+  }
+};
+
+const agregarOpcion = async (req, res) => {
+  let connection;
+  try {
+      const { nombre_opcion, nivel1, nivel2, nivel3, nivel4, nivel5 } = req.body;
+
+      if (!nombre_opcion || !nivel1) {
+          return res.status(400).json({ message: "Los parámetros de la solicitud son inválidos" });
+      }
+
+      connection = await conectar_BD_GAF_MySql();
+
+      const sqlInsert = "INSERT INTO opcion (nombre_opcion, nivel1, nivel2, nivel3, nivel4, nivel5, habilita) VALUES (?, ?, ?, ?, ?, ?, ?)";
+      const [result] = await connection.execute(sqlInsert, [nombre_opcion, nivel1, nivel2, nivel3, nivel4, nivel5, 1]);
+
+      res.status(201).json({
+          message: "Opcion creada con éxito",
+          id: result.insertId,
+      });
+
+  } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: error.message || "Algo salió mal :(" });
+  } finally {
+      if (connection) {
+          await connection.end();
+      }
   }
 };
 
@@ -647,4 +717,6 @@ module.exports = {
     deshabilitarProceso,
     editarProceso,
     cambiarTipoUsuario,
+    deshabilitarOpcion,
+    agregarOpcion
 };

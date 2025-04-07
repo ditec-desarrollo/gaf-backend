@@ -99,7 +99,7 @@ const {
     buscarExpedienteAnulacion,
     anularMovimiento,
   } = require("../controllers/gestionFinancieraControllers");
-const { listarTipoUsuario, listarUsuarios, listarProcesos, listarOpciones, agregarTipoUsuario, editarTipoUsuario, eliminarTipoUsuario, listarPermisosTU, actualizarPermisosTU, agregarUsuario, verificarEmpleado, listarPermisosU, actualizarPermisosU, agregarProceso, deshabilitarProceso, editarProceso, cambiarTipoUsuario } = require("../controllers/gafAdmin");
+const { listarTipoUsuario, listarUsuarios, listarProcesos, listarOpciones, agregarTipoUsuario, editarTipoUsuario, eliminarTipoUsuario, listarPermisosTU, actualizarPermisosTU, agregarUsuario, verificarEmpleado, listarPermisosU, actualizarPermisosU, agregarProceso, deshabilitarProceso, editarProceso, cambiarTipoUsuario, deshabilitarOpcion, agregarOpcion } = require("../controllers/gafAdmin");
 
 const router = Router();
 
@@ -291,5 +291,7 @@ router.post('/deshabilitarProceso/:id_proceso', deshabilitarProceso);
 router.put('/editarP/:id_proceso', editarProceso);
 
 router.get("/listarOpciones", listarOpciones)
+router.post('/deshabilitarOpcion/:id_opcion', deshabilitarOpcion);
+router.post('/agregarOpcion', agregarOpcion);
 
 module.exports = router;
